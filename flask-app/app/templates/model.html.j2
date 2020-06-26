@@ -1,0 +1,67 @@
+{% extends 'base.html.j2' %}
+
+{% block app_content %}
+    <p>{{ _('Please note that this list may include Deep Racer models you have deleted from the Deep Racer console but are still present in Sagemaker. (These are still valid models to use. They are listed because the results of the training job are not deleted from S3 when the model is deleted from the Deep Racer Console.') }}</p>
+    <table class="table table-hover">
+        <thead>
+            <tr>
+                <th scope="col">{{ _('Model') }}</th>
+                <th scope="col" style="width:60px">{{ _('Uploaded') }}</th>
+                <th scope="col" style="width:60px"/>
+                <th scope="col" style="width:60px"/>
+            </tr>
+        </thead>
+        <tbody>
+        {% for model in models %}
+            <tr>
+                <td style="vertical-align:middle">{{ model.ModelName }}</td>
+                <td style="text-align:center; vertical-align:middle">
+                    <span id="status{{ model.id }}">
+                        <span data-toggle="tooltip" title="{{ _('Model is present') if model.Uploaded else _('Model is not present') }}">
+                            {{ icons.tick if model.Uploaded else icons.cross }}
+                        </span>
+                    </span>
+                </td>
+                <td style="text-align:center">
+                    <span id="action{{ model.id }}">
+                        <a data-toggle="tooltip" title="{{ _('Delete model') if model.Uploaded else _('Upload model') }}"
+                            href="javascript:modelAction(
+                                '{{ model.id }}',
+                                '{{ 'Delete' if model.Uploaded else 'Upload' }}',
+                                '{{ model.Region }}/{{ model.TrainingJobName }}'
+                            );">
+                            {{ icons.delete if model.Uploaded else icons.upload }}
+                        </a>
+                    </span>
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}
+
+{% block scripts %}
+    {{ super() }}
+    <script>
+        function modelAction(id, action, model_id) {
+            var old_action_html = $('#action' + id).html();
+            $('#action' + id).html('<div class="spinner-border spinner-border-sm text-muted" role="status"><span class="sr-only">Loading...</span></div>');
+            var urlParams = new URLSearchParams(window.location.search);
+            $.post('/action?test=this', {
+                id: id,
+                action: action,
+                model_id: model_id,
+                role_arn: urlParams.get('rolearn')
+            }).done(function(response) {
+                if (response['action_html'] == '') {
+                    $('#action' + id).html(old_action_html)
+                } else {
+                    $('#status' + id).html(response['status_html'])
+                    $('#action' + id).html(response['action_html'])
+                };
+            }).fail(function() {
+                $('#action' + id).html(old_action_html);
+            });
+        }
+    </script>
+{% endblock %}

@@ -1,0 +1,125 @@
+version: 0.2
+
+phases:
+  pre_build:
+    commands:
+      - echo Logging in to Amazon ECR...
+      - $(aws ecr get-login --no-include-email --region $AWS_REGION)
+  build:
+    commands:
+      - echo Build started on `date`
+      - echo Building the sam application...
+      - sam build
+      - sam package --s3-bucket $CODEPIPELINE_BUCKET --s3-prefix tmp --kms-key-id $CODEBUILD_KMS_KEY_ID --output-template-file package-template.yaml --region $AWS_REGION
+      - echo Building the Docker image...
+      - docker build -t $IMAGE_REPO_NAME:$IMAGE_TAG ./flask-app
+      - docker tag $IMAGE_REPO_NAME:$IMAGE_TAG $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$IMAGE_REPO_NAME:$IMAGE_TAG
+  post_build:
+    commands:
+      - echo Build completed on `date`
+      - echo Pushing the Docker image...
+      - docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$IMAGE_REPO_NAME:$IMAGE_TAG
+      - echo Creating taskdef.json file...
+      - |
+        cat >taskdef.json  <<EOL
+        {
+          "executionRoleArn": "$EXECUTION_ROLE_ARN",
+          "taskRoleArn": "$TASK_ROLE_ARN",
+          "containerDefinitions": [
+            {
+              "name": "flask-app",
+              "image": "<IMAGE_NAME>",
+              "essential": true,
+              "portMappings": [
+                {
+                  "hostPort": 5000,
+                  "protocol": "tcp",
+                  "containerPort": 5000
+                }
+              ],
+              "environment": [
+                {
+                  "name": "API_KEY",
+                  "value": "$API_KEY"
+                },
+                {
+                  "name": "AWS_XRAY_CONTEXT_MISSING",
+                  "value": "LOG_ERROR"
+                },
+                {
+                  "name": "DESTINATION_BUCKET",
+                  "value": "$DESTINATION_BUCKET"
+                },
+                {
+                  "name": "WEBSERVICE_ENDPOINT",
+                  "value": "$WEBSERVICE_ENDPOINT"
+                }
+              ],
+              "logConfiguration": {
+                "logDriver": "awslogs",
+                "options": {
+                  "awslogs-group": "$LOGS_GROUP",
+                  "awslogs-region": "$AWS_REGION",
+                  "awslogs-stream-prefix": "fargate"
+                }
+              },
+            },
+            {
+              "name": "x-ray-daemon",
+              "image": "amazon/aws-xray-daemon",
+              "essential": true,
+              "portMappings": [
+                {
+                  "hostPort": 2000,
+                  "protocol": "udp",
+                  "containerPort": 2000
+                }
+              ],
+              "logConfiguration": {
+                "logDriver": "awslogs",
+                "options": {
+                  "awslogs-group": "$LOGS_GROUP",
+                  "awslogs-region": "$AWS_REGION",
+                  "awslogs-stream-prefix": "fargate"
+                }
+              },
+              "cpu": 32,
+              "memoryReservation": 256,
+            }
+          ],
+          "requiresCompatibilities": [
+            "EC2",
+            "FARGATE"
+          ],
+          "networkMode": "awsvpc",
+          "cpu": "512",
+          "memory": "1024",
+          "family": "$FAMILY"
+        }
+        EOL
+      - echo Creating appspec.yaml file...
+      - |
+        cat >appspec.yaml  <<EOL
+        version: 0.0
+        Resources:
+          - TargetService:
+              Type: AWS::ECS::Service
+              Properties:
+                TaskDefinition: <TASK_DEFINITION>
+                LoadBalancerInfo:
+                  ContainerName: flask-app
+                  ContainerPort: 5000
+        EOL
+      - echo Creating imageDetail.json file...
+      - |
+        cat >imageDetail.json  <<EOL
+        {
+            "ImageURI": "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$IMAGE_REPO_NAME:$IMAGE_TAG"
+        }
+        EOL
+artifacts:
+  files:
+    - package-template.yaml
+    - taskdef.json
+    - appspec.yaml
+    - imageDetail.json

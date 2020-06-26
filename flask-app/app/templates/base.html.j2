@@ -1,0 +1,78 @@
+{% extends 'bootstrap/base.html' %}
+
+{% block title %}
+    {% if title %}{{ title }}{% else %}{% endif %}
+{% endblock %}
+
+{% block navbar %}
+    <div class="container">
+        <div align="center">
+            <img src="{{ url_for('static', filename='DeepRacer.png') }}" style="max-width:100%; height:auto"/>
+        </div>
+        <h1>Deep Racer Model Uploader</h1>
+        <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNavAltMarkup" aria-controls="navbarNavAltMarkup" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNavAltMarkup">
+                <div class="navbar-nav">
+                    <a id="index" class="nav-item nav-link" href="{{ url_for('index') }}">{{ _('Home') }}</a>
+                    <a id="role" class="nav-item nav-link" href="{{ url_for('role') }}">{{ _('Role Upload') }}</a>
+                    <a id="s3" class="nav-item nav-link" href="{{ url_for('s3') }}">{{ _('S3 Upload') }}</a>
+                </div>
+            </div>
+        </nav>
+    </div>
+{% endblock %}
+
+
+{% block content %}
+    <div id="loading" class="text-center">
+        <div class="spinner-border text-primary text-center m-5 p-5" style="width: 5rem; height: 5rem;" role="status">
+            <span class="sr-only">{{ _('Loading') }}...</span>
+        </div>
+    </div>
+
+    <div class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% for category, message in messages %}
+        {% if category == 'message' %}
+        <div class="alert alert-warning" role="alert">
+        {% else %}
+        <div class="alert alert-{{ category }}" role="alert">
+        {% endif %}
+            <a class="close" href="#" data-dismiss="alert">×</a>
+            {{ message }}
+        </div>
+        {% endfor %}
+        {% endif %}
+        {% endwith %}
+        </br>
+        {% block app_content %}{% endblock %}
+    </div>
+{% endblock %}
+
+{% block styles %}
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+    <style>
+        #loading {
+            display: none;
+        }
+    </style>
+    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
+{% endblock %}
+
+{% block scripts %}
+    <div style="height: 100px;">&nbsp;</div>
+    <script src="https://code.jquery.com/jquery-3.4.1.min.js" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js" integrity="sha384-wfSDF2E50Y2D1uUdj0O3uMBJnjuUD4Ih7YwaYd1iqfktj0Uod8GCExl3Og8ifwB6" crossorigin="anonymous"></script>
+    <script>
+        $(document).ready(function () {
+            var path = window.location.pathname;
+            var page = path.split("/").pop();
+            $(page == '' ? '#index' : '#' + page).addClass('active');
+        });
+    </script>
+{% endblock %}

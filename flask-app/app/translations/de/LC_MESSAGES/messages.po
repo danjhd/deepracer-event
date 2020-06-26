@@ -1,0 +1,319 @@
+# German translations for PROJECT.
+# Copyright (C) 2020 ORGANIZATION
+# This file is distributed under the same license as the PROJECT project.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2020.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PROJECT VERSION\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2020-04-03 08:57+0100\n"
+"PO-Revision-Date: 2020-03-30 16:08+0100\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: de\n"
+"Language-Team: de <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n != 1)\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.8.0\n"
+
+#: app/forms.py:8
+msgid "Please enter the Role Arn here:"
+msgstr "Bitte tragen Sie die Arn der IAM-Rolle ein:"
+
+#: app/forms.py:10
+msgid "Enter the AWS IAM Role arn"
+msgstr "Geben Sie die Arn der IAM-Rolle ein"
+
+#: app/forms.py:12
+msgid ""
+"Must be a valid AWS IAM Role arn in the format: "
+"arn:aws:iam::{AccountId}:role/{RoleNameWithPath}"
+msgstr ""
+"Geben Sie eine gültige Arn einer IAM Rolle ein, im Format: "
+"arn:aws:iam::{AccountId}:role/{RoleNameWithPath}"
+
+#: app/forms.py:17
+msgid "Submit"
+msgstr "Absenden"
+
+#: app/forms.py:25
+msgid "Account Id:"
+msgstr ""
+
+#: app/forms.py:27
+msgid "Enter the AWS Account Id"
+msgstr ""
+
+#: app/forms.py:29
+msgid "Must be a valid AWS Account Id. (12 digits e.g. 123456789012)"
+msgstr ""
+
+#: app/forms.py:35
+msgid "Model File"
+msgstr ""
+
+#: app/forms.py:42 app/routes.py:79
+msgid "Upload"
+msgstr "Hochladen"
+
+#: app/routes.py:40
+msgid ""
+"No Models were found. Please verify the account has Deep Racer models and"
+" the IAM role supplied has the correct permissions to access them."
+msgstr ""
+"Keine Modelle gefunden. Bitte überprüfen Sie dass Ihr Account Deep Racer "
+"Modelle beinhaltet und die von Ihnen angegebene IAM Rolle die notwendigen"
+" Zugriffsrechte auf diese gewährt."
+
+#: app/routes.py:48
+msgid ""
+"You selected a file with an invalid filename. Please ensure you select a "
+"downloaded model file with extension .tar.gz"
+msgstr ""
+"Sie haben eine Datei mit einem ungültigen Dateinamen ausgewählt. Bitte "
+"verwenden Sie nur heruntergeladene Modelldateien vom Dateityp .tar.gz"
+
+#: app/routes.py:54
+msgid "A model with the same name already exists, file upload cancelled."
+msgstr ""
+"Ein Modell mit dem gleichen Namen existiert bereits, Dateiupload wurde "
+"abgebrochen."
+
+#: app/routes.py:61
+msgid "File successfully uploaded."
+msgstr "Datei wurde erfolgreich hochgeladen."
+
+#: app/routes.py:71 app/templates/model.html.j2:20
+msgid "Model is present"
+msgstr "Modell ist vorhanden"
+
+#: app/routes.py:73
+msgid "Delete"
+msgstr "Löschen"
+
+#: app/routes.py:77 app/templates/model.html.j2:20
+msgid "Model is not present"
+msgstr "Modell ist nicht vorhanden"
+
+#: app/templates/404.html.j2:4
+msgid "File Not Found"
+msgstr "Datei nicht gefunden"
+
+#: app/templates/404.html.j2:5 app/templates/500.html.j2:6
+msgid "Back"
+msgstr "Zurück"
+
+#: app/templates/500.html.j2:4
+msgid "An unexpected error has occurred"
+msgstr "Es ist ein unerwarteter Fehler aufgetreten"
+
+#: app/templates/500.html.j2:5
+msgid "The administrator has been notified. Sorry for the inconvenience!"
+msgstr ""
+"Der Administrator wurde informiert, bitte entschuldigen Sie die "
+"Unannehmlichkeiten!"
+
+#: app/templates/base.html.j2:19
+msgid "Home"
+msgstr "Startseite"
+
+#: app/templates/base.html.j2:20 app/templates/index.html.j2:7
+msgid "Role Upload"
+msgstr "Rolle hochladen"
+
+#: app/templates/base.html.j2:21 app/templates/index.html.j2:9
+msgid "S3 Upload"
+msgstr "Mit S3 hochladen"
+
+#: app/templates/base.html.j2:32
+msgid "Loading"
+msgstr "Lade"
+
+#: app/templates/index.html.j2:4
+msgid "This site allows you to upload Deep Racer models directly onto the cars."
+msgstr ""
+"Diese Seite ermöglicht es Ihnen ihre Deep Racer Modelle direkt in die "
+"Fahrzeuge zu laden."
+
+#: app/templates/index.html.j2:5
+msgid "There are two methods available"
+msgstr "Es stehen zwei Methoden zur Verfügung"
+
+#: app/templates/index.html.j2:8
+msgid ""
+"This requires you to create an IAM role in your AWS account that has "
+"access to the Deep Racer Models. This application will then assume the "
+"supplied role and list the available models. You are then able click and "
+"choose which model(s) you wish to upload (or delete) from the cars."
+msgstr ""
+"Es ist notwendig, dass Sie eine IAM Rolle erstellen, die die notwendigen "
+"Rechte hat um auf die Deep Racer Modelle zuzugreifen. Diese Anwendung "
+"wird dann diese Rolle annehmen um die verfügbaren Modelle anzuzeigen. Aus"
+" den angezeigten Modellen können Sie dann die Modelle wählen, die Sie auf"
+" die Fahrzeuge laden oder löschen wollen."
+
+#: app/templates/index.html.j2:10
+msgid ""
+"This method is simpler in concept. You have the option to upload a model "
+"from your local computer to this site. The site will then transfer the "
+"model down to the car. This method therefore does not require you to "
+"create a role in your AWS account, but it could be considered more work "
+"anyway, since you will need to log in and download the model from your "
+"account manually first."
+msgstr ""
+"Mit dieser etwas einfacheren Methode können sie ein Deep Racer Modell von"
+" Ihrem PC auf diese Seite hochladen. Das Modell wird dann von dieser "
+"Applikation auf das Fahrzeug geladen. Sie brauchen also keine IAM Rolle "
+"konfigurieren, dafür müssen Sie aber die Modelle zuvor aus dem AWS "
+"Account auf Ihren lokalen PC herunterladen."
+
+#: app/templates/index.html.j2:12
+msgid ""
+"The results of both methods are identical. The difference is down to "
+"personal preference."
+msgstr "The Ergebnisse beider Methoden sind identisch."
+
+#: app/templates/index.html.j2:13
+msgid ""
+"To proceed please choose the option you prefer from the navigation bar "
+"above."
+msgstr ""
+"Bitte wählen Sie eine der beiden Optionen aus der oberen "
+"Navigationsleiste um weiter zu machen."
+
+#: app/templates/model.html.j2:4
+msgid ""
+"Please note that this list may include Deep Racer models you have deleted"
+" from the Deep Racer console but are still present in Sagemaker. (These "
+"are still valid models to use. They are listed because the results of the"
+" training job are not deleted from S3 when the model is deleted from the "
+"Deep Racer Console."
+msgstr ""
+"Bitte bachten Sie, dass diese Liste möglicherweise Deep Racer Modelle "
+"anzeigt die Sie aus der Deep Racer Konsole gelöscht haben, wenn diese "
+"noch in Sagemaker vorliegen. (Diese Modelle können weiterhin genutzt "
+"werden, sie werden angezeigt weil die Ergebnisse der Trainings-Jobs in "
+"Sagemaker nicht aus S3 gelöscht werden, wenn die Modelle in der Deep "
+"Racer Konsole gelöscht werden.)"
+
+#: app/templates/model.html.j2:8
+msgid "Model"
+msgstr "Modell"
+
+#: app/templates/model.html.j2:9
+msgid "Uploaded"
+msgstr "Hochgeladen"
+
+#: app/templates/model.html.j2:27
+msgid "Delete model"
+msgstr "Modell löschen"
+
+#: app/templates/model.html.j2:27
+msgid "Upload model"
+msgstr "Modell hochladen"
+
+#: app/templates/role.html.j2:5
+msgid ""
+"This application allows you to upload Deep Racer models trained in your "
+"own AWS account to the Deep Racer cars for this event."
+msgstr ""
+"Mit dieser Anwendung können Sie Ihre Deep Racer Modelle, die Sie in Ihrem"
+" AWS Account trainiert haben, für dieses Event in Ihr Fahrzeug laden."
+
+#: app/templates/role.html.j2:6
+msgid ""
+"To use this application we ask you to create an IAM role in your account "
+"that this application will use to access your models and upload them to "
+"the car."
+msgstr ""
+"Um diese Anwendung zu nutzen, möchten wir Sie bitten ein IAM Rolle in "
+"Ihrem Account mit den notwendigen Rechten anzulegen. Diese Rolle wird "
+"dann verwendet um auf die Modelle zuzugreifen und in die Fahrzeuge zu "
+"laden."
+
+#: app/templates/role.html.j2:6
+msgid "Please click this"
+msgstr "Bitte folgen Sie diesem"
+
+#: app/templates/role.html.j2:6
+msgid "link"
+msgstr "Link"
+
+#: app/templates/role.html.j2:6
+msgid "to download a"
+msgstr "um eine Vorlage für"
+
+#: app/templates/role.html.j2:6
+msgid "CloudFormation"
+msgstr "CloudFormation"
+
+#: app/templates/role.html.j2:6
+msgid "template which will deploy the role for you."
+msgstr "herunterzuladen. Es wird die notwendige Rolle für Sie erstellen."
+
+#: app/templates/role.html.j2:9
+msgid ""
+"If you prefer to create the IAM role yourself manually please click here "
+"to show the required policies."
+msgstr ""
+"Falls Sie es vorziehen die Rolle manuell zu erstellen, folgen Sie bitte "
+"diesem Link um die notwendigen Richtlinien anzuzeigen."
+
+#: app/templates/role.html.j2:14
+msgid "Trust relationship"
+msgstr "Vertrauens-Beziehung"
+
+#: app/templates/role.html.j2:18
+msgid "Policy"
+msgstr "Richtlinie"
+
+#: app/templates/role.html.j2:18
+msgid ""
+"please replace the highlighted sections with values specific to your AWS "
+"account"
+msgstr ""
+"Bitte ersetzen Sie die markierten Stellen mit den Werten die für Ihr AWS "
+"Konto zutreffen"
+
+#: app/templates/s3.html.j2:5
+msgid ""
+"This option allows you to manually upload a previously downloaded Deep "
+"Racer Model file. Use this option if you prefer not to create and provide"
+" an IAM role."
+msgstr ""
+"Mit dieser Option können Sie manuell eine zuvor heruntergeladene Deep "
+"Racer Modelldatei hochladen. Verwenden Sie diese Option, wenn Sie keine "
+"IAM-Rolle erstellen und bereitstellen möchten."
+
+#: app/templates/s3.html.j2:6
+msgid ""
+"First, access the Deep Racer console in your AWS account and download the"
+" Model to your local computer."
+msgstr ""
+"Öffnen Sie zunächst die Deep Racer-Konsole in Ihrem AWS-Konto und laden "
+"Sie das Modell auf Ihren lokalen Computer herunter."
+
+#: app/templates/s3.html.j2:9
+msgid "Click here to show a screenshot of how to download the model."
+msgstr ""
+"Klicken Sie hier, um einen Screenshot zu zeigen, wie Sie das Modell "
+"herunterladen können."
+
+#: app/templates/s3.html.j2:15
+msgid ""
+"Next, complete the form below. When choosing the Model File select the "
+"file downloaded previously to upload this model. The Account Id is "
+"required to ensure that Model names are unique."
+msgstr ""
+"Als nächstes füllen Sie das untenstehende Formular aus. Bei der Auswahl "
+"der Modelldatei, verwenden Sie die Datei, die zuvor heruntergeladen "
+"wurde. Die Konto-ID ist erforderlich, um sicherzustellen, dass "
+"Modellnamen eindeutig sind."
+
+#: app/templates/s3.html.j2:18
+msgid "Click here to show a screenshot of how to find your account id."
+msgstr ""
+"Klicken Sie hier, um einen Screenshot zu zeigen, wie Sie Ihre Account-ID "
+"finden."

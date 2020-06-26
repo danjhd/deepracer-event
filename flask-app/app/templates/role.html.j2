@@ -1,0 +1,36 @@
+{% extends 'base.html.j2' %}
+{% import 'bootstrap/wtf.html' as wtf %}
+
+{% block app_content %}
+    <p>{{ _('This application allows you to upload Deep Racer models trained in your own AWS account to the Deep Racer cars for this event.') }}</p>
+    <p>{{ _('To use this application we ask you to create an IAM role in your account that this application will use to access your models and upload them to the car.') }} {{ _('Please click this') }} <a href="./downloads/iam_role.yaml" download>{{ _('link') }}</a> {{ _('to download a') }} <a href="https://aws.amazon.com/cloudformation/" target="_blank">{{ _('CloudFormation') }}</a> {{ _('template which will deploy the role for you.') }}</p>
+    <p>
+        <a data-toggle="collapse" href="#iamRole">
+            {{ _('If you prefer to create the IAM role yourself manually please click here to show the required policies.') }}
+        </a>
+    </p>
+    <div class="collapse" id="iamRole">
+        <p>
+            <b>{{ _('Trust relationship') }}</b><br/>
+            {% include './code/iam_trust_relationship.html.j2' %}
+        </p>
+        <p>
+            <b>IAM {{ _('Policy') }}</b> ({{ _('please replace the highlighted sections with values specific to your AWS account') }}).<br/>
+            {% include './code/iam_inline_policy.html.j2' %}
+        </p>
+    </div>
+    {{ wtf.quick_form(form, button_map={'submit':'dark'}, method='get', action=url_for('model')) }}
+{% endblock %}
+
+{% block scripts %}
+    {{ super() }}
+    <script>
+        function loading(){
+            var input = document.getElementById('rolearn');
+            if (input.checkValidity()) {
+                $("#loading").show();
+                $(".container").hide();
+            }
+        }
+    </script>
+{% endblock %}

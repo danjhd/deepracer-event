@@ -1,0 +1,65 @@
+{% extends 'base.html.j2' %}
+{% import 'bootstrap/wtf.html' as wtf %}
+
+{% block app_content %}
+    <p>{{ _('This option allows you to manually upload a previously downloaded Deep Racer Model file. Use this option if you prefer not to create and provide an IAM role.') }}</p>
+    <p>{{ _('First, access the Deep Racer console in your AWS account and download the Model to your local computer.') }}</p>
+    <p>
+        <a data-toggle="collapse" href="#screenshot1">
+            {{ _('Click here to show a screenshot of how to download the model.') }}
+        </a>
+    </p>
+    <div class="collapse" id="screenshot1" align="center">
+        <img src="{{ url_for('static', filename='downloadmodel.png') }}" style="max-width:100%; height:auto"/>
+    </div>
+    <p>{{ _('Next, complete the form below. When choosing the Model File select the file downloaded previously to upload this model. The Account Id is required to ensure that Model names are unique.')}}
+    <p>
+        <a data-toggle="collapse" href="#screenshot2">
+            {{ _('Click here to show a screenshot of how to find your account id.') }}
+        </a>
+    </p>
+    <div class="collapse" id="screenshot2" align="center">
+        <img src="{{ url_for('static', filename='accountid.png') }}" style="max-width:100%; height:auto"/>
+    </div>
+    {{ wtf.quick_form(form, button_map={'submit':'dark'}) }}
+{% endblock %}
+
+{% block scripts %}
+    {{ super() }}
+    <script>
+        (function($) {
+        $.fn.inputFilter = function(inputFilter) {
+            return this.on("input keydown keyup mousedown mouseup select contextmenu drop", function() {
+                if (inputFilter(this.value)) {
+                    this.oldValue = this.value;
+                    this.oldSelectionStart = this.selectionStart;
+                    this.oldSelectionEnd = this.selectionEnd;
+                } else if (this.hasOwnProperty("oldValue")) {
+                    this.value = this.oldValue;
+                    this.setSelectionRange(this.oldSelectionStart, this.oldSelectionEnd);
+                } else {
+                    this.value = "";
+                }
+            });
+        };
+        }(jQuery));
+        $(document).ready(function() {
+            $("#accountid").inputFilter(function(value) {
+                return /^[0-9]*$/.test(value);
+            });
+        });
+        $(document).ready(function() {
+            $("#modelname").inputFilter(function(value) {
+                return /^[a-z,A-Z,0-9\-]*$/.test(value);
+            });
+        });
+        function loading(){
+            var input1 = document.getElementById('accountid');
+            var input2 = document.getElementById('modelfile');
+            if (input1.checkValidity() && input2.checkValidity()) {
+                $("#loading").show();
+                $(".container").hide();
+            }
+        }
+    </script>
+{% endblock %}

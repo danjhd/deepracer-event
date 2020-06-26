@@ -1,0 +1,18 @@
+{% extends 'base.html.j2' %}
+
+{% block app_content %}
+<p>{{ _('This site allows you to upload Deep Racer models directly onto the cars.') }}</p>
+<p>{{ _('There are two methods available') }}:</p>
+<ul>
+<li><a href="{{ url_for('role') }}">{{ _('Role Upload') }}</a></li>
+<p>{{ _('This requires you to create an IAM role in your AWS account that has access to the Deep Racer Models. This application will then assume the supplied role and list the available models. You are then able click and choose which model(s) you wish to upload (or delete) from the cars.') }}</p>
+<li><a href="{{ url_for('s3') }}">{{ _('S3 Upload') }}</a></li>
+<p>{{ _('This method is simpler in concept. You have the option to upload a model from your local computer to this site. The site will then transfer the model down to the car. This method therefore does not require you to create a role in your AWS account, but it could be considered more work anyway, since you will need to log in and download the model from your account manually first.') }}</p>
+</ul>
+<p>{{ _('The results of both methods are identical. The difference is down to personal preference.') }}</p>
+<p>{{ _('To proceed please choose the option you prefer from the navigation bar above.') }}</p>
+{% endblock %}
+
+{% block scripts %}
+    {{ super() }}
+{% endblock %}

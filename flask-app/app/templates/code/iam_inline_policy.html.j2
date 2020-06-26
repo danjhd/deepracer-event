@@ -1,0 +1,27 @@
+<code>
+    {<br/>
+    &nbsp;&nbsp;"Version": "2012-10-17",<br/>
+    &nbsp;&nbsp;"Statement": [<br/>
+    &nbsp;&nbsp;&nbsp;&nbsp;{<br/>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"Effect": "Allow",<br/>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"Action": "sagemaker:ListTrainingJobs",<br/>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"Resource": "*"<br/>
+    &nbsp;&nbsp;&nbsp;&nbsp;},<br/>
+    &nbsp;&nbsp;&nbsp;&nbsp;{<br/>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"Effect": "Allow",<br/>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"Action": "sagemaker:DescribeTrainingJob",<br/>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"Resource": "arn:aws:sagemaker:us-east-1:<mark>AccountId</mark>:training-job/dr-sm-rltj*"<br/>
+    &nbsp;&nbsp;&nbsp;&nbsp;},<br/>
+    &nbsp;&nbsp;&nbsp;&nbsp;{<br/>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"Effect": "Allow",<br/>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"Action": "s3:ListBucket",<br/>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"Resource": "arn:aws:s3:::<mark>DeepRacerBucketName</mark>"<br/>
+    &nbsp;&nbsp;&nbsp;&nbsp;},<br/>
+    &nbsp;&nbsp;&nbsp;&nbsp;{<br/>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"Effect": "Allow",<br/>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"Action": "s3:GetObject",<br/>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"Resource": "arn:aws:s3:::<mark>DeepRacerBucketName</mark>/*"<br/>
+    &nbsp;&nbsp;&nbsp;&nbsp;}<br/>
+    &nbsp;&nbsp;]<br/>
+    }
+</code>

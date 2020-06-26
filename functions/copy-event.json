@@ -1,0 +1,138 @@
+{
+    "resource": "/models/{Region}/{JobId}",
+    "path": "/models/us-east-1/dr-sm-rltj--20200208093758-84379eb5-c611-4c85-b48e-28f105c28984",
+    "httpMethod": "GET",
+    "headers": {
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Encoding": "gzip, deflate, br",
+        "Accept-Language": "en-GB",
+        "cache-control": "max-age=0",
+        "CloudFront-Forwarded-Proto": "https",
+        "CloudFront-Is-Desktop-Viewer": "true",
+        "CloudFront-Is-Mobile-Viewer": "false",
+        "CloudFront-Is-SmartTV-Viewer": "false",
+        "CloudFront-Is-Tablet-Viewer": "false",
+        "CloudFront-Viewer-Country": "GB",
+        "Cookie": "pN=16; regStatus=pre-register; s_dslv=1570717588113; s_fid=4D638CC8AC70B4B1-29900E2BF2EDBA77; s_pers=%20s_vnum%3D1584182343224%2526vn%253D34%7C1584182343224%3B%20s_invisit%3Dtrue%7C1583944638541%3B%20s_nr%3D1583942838545-Repeat%7C1591718838545%3B; s_sess=%20s_cc%3Dtrue%3B%20s_sq%3Dawsamazonprod1%252Cawsamazonallprod1%253D%252526pid%25253Dv1%2525252Fdocumentation%2525252Fapi%2525252Flatest%2525252Freference%2525252Fservices%2525252Fs3%252526pidt%25253D1%252526oid%25253Dhttps%2525253A%2525252F%2525252Fboto3.amazonaws.com%2525252Fv1%2525252Fdocumentation%2525252Fapi%2525252Flatest%2525252Freference%2525252Fservices%2525252Fs3.html%25252523S3.Client.head_ob%252526ot%25253DA%3B; s_vn=1584110092406%26vn%3D5",
+        "Host": "szzrwfbmdi.execute-api.eu-west-2.amazonaws.com",
+        "upgrade-insecure-requests": "1",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:68.0) Gecko/20100101 Firefox/68.0",
+        "Via": "2.0 a411e1d9cf3f776cc77733eb0d71fb34.cloudfront.net (CloudFront)",
+        "X-Amz-Cf-Id": "Q8cLuBkEUxvuPfWhdhofDbRAZ1fep7enrK0ea67xmnXbpI5ERr_iMg==",
+        "X-Amzn-Trace-Id": "Root=1-5e69213e-cb0e6f7005afe8259fd938de",
+        "X-Forwarded-For": "86.142.113.174, 130.176.6.73",
+        "X-Forwarded-Port": "443",
+        "X-Forwarded-Proto": "https"
+    },
+    "multiValueHeaders": {
+        "Accept": [
+            "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
+        ],
+        "Accept-Encoding": [
+            "gzip, deflate, br"
+        ],
+        "Accept-Language": [
+            "en-GB"
+        ],
+        "cache-control": [
+            "max-age=0"
+        ],
+        "CloudFront-Forwarded-Proto": [
+            "https"
+        ],
+        "CloudFront-Is-Desktop-Viewer": [
+            "true"
+        ],
+        "CloudFront-Is-Mobile-Viewer": [
+            "false"
+        ],
+        "CloudFront-Is-SmartTV-Viewer": [
+            "false"
+        ],
+        "CloudFront-Is-Tablet-Viewer": [
+            "false"
+        ],
+        "CloudFront-Viewer-Country": [
+            "GB"
+        ],
+        "Cookie": [
+            "pN=16; regStatus=pre-register; s_dslv=1570717588113; s_fid=4D638CC8AC70B4B1-29900E2BF2EDBA77; s_pers=%20s_vnum%3D1584182343224%2526vn%253D34%7C1584182343224%3B%20s_invisit%3Dtrue%7C1583944638541%3B%20s_nr%3D1583942838545-Repeat%7C1591718838545%3B; s_sess=%20s_cc%3Dtrue%3B%20s_sq%3Dawsamazonprod1%252Cawsamazonallprod1%253D%252526pid%25253Dv1%2525252Fdocumentation%2525252Fapi%2525252Flatest%2525252Freference%2525252Fservices%2525252Fs3%252526pidt%25253D1%252526oid%25253Dhttps%2525253A%2525252F%2525252Fboto3.amazonaws.com%2525252Fv1%2525252Fdocumentation%2525252Fapi%2525252Flatest%2525252Freference%2525252Fservices%2525252Fs3.html%25252523S3.Client.head_ob%252526ot%25253DA%3B; s_vn=1584110092406%26vn%3D5"
+        ],
+        "Host": [
+            "szzrwfbmdi.execute-api.eu-west-2.amazonaws.com"
+        ],
+        "upgrade-insecure-requests": [
+            "1"
+        ],
+        "User-Agent": [
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:68.0) Gecko/20100101 Firefox/68.0"
+        ],
+        "Via": [
+            "2.0 a411e1d9cf3f776cc77733eb0d71fb34.cloudfront.net (CloudFront)"
+        ],
+        "X-Amz-Cf-Id": [
+            "Q8cLuBkEUxvuPfWhdhofDbRAZ1fep7enrK0ea67xmnXbpI5ERr_iMg=="
+        ],
+        "X-Amzn-Trace-Id": [
+            "Root=1-5e69213e-cb0e6f7005afe8259fd938de"
+        ],
+        "X-Forwarded-For": [
+            "86.142.113.174, 130.176.6.73"
+        ],
+        "X-Forwarded-Port": [
+            "443"
+        ],
+        "X-Forwarded-Proto": [
+            "https"
+        ]
+    },
+    "queryStringParameters": {
+        "Name": "2020-02-08",
+        "RoleArn": "arn:aws:iam::409650071325:role/DeepRacerUser"
+    },
+    "multiValueQueryStringParameters": {
+        "Name": [
+            "2020-02-08"
+        ],
+        "RoleArn": [
+            "arn:aws:iam::409650071325:role/DeepRacerUser"
+        ]
+    },
+    "pathParameters": {
+        "Region": "us-east-1",
+        "JobId": "dr-sm-rltj--20200208093758-84379eb5-c611-4c85-b48e-28f105c28984"
+    },
+    "stageVariables": null,
+    "requestContext": {
+        "resourceId": "p2q5cn",
+        "resourcePath": "/models/{Region}/{JobId}",
+        "httpMethod": "GET",
+        "extendedRequestId": "JPIhtGWDLPEFo3g=",
+        "requestTime": "11/Mar/2020:17:34:54 +0000",
+        "path": "/Prod/models/us-east-1/dr-sm-rltj--20200208093758-84379eb5-c611-4c85-b48e-28f105c28984",
+        "accountId": "409650071325",
+        "protocol": "HTTP/1.1",
+        "stage": "Prod",
+        "domainPrefix": "szzrwfbmdi",
+        "requestTimeEpoch": 1583948094067,
+        "requestId": "5d2863b8-f0d2-4356-a952-686aad250ee2",
+        "identity": {
+            "cognitoIdentityPoolId": null,
+            "accountId": null,
+            "cognitoIdentityId": null,
+            "caller": null,
+            "sourceIp": "86.142.113.174",
+            "principalOrgId": null,
+            "accessKey": null,
+            "cognitoAuthenticationType": null,
+            "cognitoAuthenticationProvider": null,
+            "userArn": null,
+            "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:68.0) Gecko/20100101 Firefox/68.0",
+            "user": null
+        },
+        "domainName": "szzrwfbmdi.execute-api.eu-west-2.amazonaws.com",
+        "apiId": "szzrwfbmdi"
+    },
+    "body": null,
+    "isBase64Encoded": false
+}

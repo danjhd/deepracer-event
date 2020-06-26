@@ -1,0 +1,5 @@
+.aws-sam
+deployment/template.yaml
+venv
+.flaskenv
+__pycache__
