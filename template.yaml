@@ -1,28 +1,101 @@
 AWSTemplateFormatVersion: '2010-09-09'
 
-Transform:
-  - AWS::Serverless-2016-10-31
-  - Boto3
+Transform: AWS::Serverless-2016-10-31
 
 Description: Deploys the Python-Flask Web App and API gateway used to put a user interface on automated Deep Racer Model upload.
 
 Parameters:
+
+  Vpc:
+    Type: AWS::EC2::VPC::Id
+
+  PublicSubnets:
+    Type: List<AWS::EC2::Subnet::Id>
+
+  PrivateSubnets:
+    Type: List<AWS::EC2::Subnet::Id>
 
   HostedZoneName:
     Description: The Route53 hosted zone name to use.
     Type: String
     AllowedPattern: '^[a-z0-9\-\.]+[^\.]$'
     ConstraintDescription: 'Must be a valid domain name string and also must NOT end in a full stop.'
-    Default: aws.djohns.com
 
-  SubDomainPrefix:
-    Description: The Subdomain prefix to use for the web app.
+  HostedZoneId:
+    Description: The Route53 hosted id (must match the HostedZoneName).
+    Type: AWS::Route53::HostedZone::Id
+
+  DeployS3Trigger:
     Type: String
-    AllowedPattern: '^[a-z0-9\-\.]+[^\.]$'
-    ConstraintDescription: 'Must be a valid sub domain name prefix.'
-    Default: deepracer
+    AllowedValues:
+      - 'Yes'
+      - 'No'
+    Default: 'No'
+
+Conditions:
+
+  S3Trigger: !Equals [!Ref DeployS3Trigger, 'Yes']
 
 Resources:
+
+  Certificate:
+    Type: AWS::CertificateManager::Certificate
+    Properties: 
+      DomainName: !Ref HostedZoneName
+      DomainValidationOptions: 
+        - DomainName: !Ref HostedZoneName
+          HostedZoneId: !Ref HostedZoneId
+      SubjectAlternativeNames: 
+        - !Sub '*.${HostedZoneName}'
+      ValidationMethod: DNS
+
+  SQSQueue:
+    Type: AWS::SQS::Queue
+
+  SQSQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref SQSQueue
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - sqs:SendMessage
+            Resource:
+              - !GetAtt SQSQueue.Arn
+            Principal:
+              Service: s3.amazonaws.com
+            Condition:
+              ArnLike:
+                'aws:SourceArn': !Sub 'arn:aws:s3:*:*:${ModelData}'
+
+  ModelData:
+    Type: AWS::S3::Bucket
+    Properties:
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: True
+        BlockPublicPolicy: True
+        IgnorePublicAcls: True
+        RestrictPublicBuckets: True
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      NotificationConfiguration: !If
+        - S3Trigger
+        - QueueConfigurations:
+            - Queue: !GetAtt SQSQueue.Arn
+              Event: 's3:ObjectCreated:*'
+            - Queue: !GetAtt SQSQueue.Arn
+              Event: 's3:ObjectRemoved:*'
+        - !Ref AWS::NoValue
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W35
+            reason: No logging required
 
   CodePipelineBucket:
     Type: AWS::S3::Bucket
@@ -95,15 +168,11 @@ Resources:
                 - s3:PutObject
                 - s3:DeleteObject
               Resource:
-                - !Sub
-                    - 'arn:aws:s3:::${ModelDataBucket}'
-                    - ModelDataBucket: !ImportValue deepracer-event-ModelDataBucket
-                - !Sub
-                    - 'arn:aws:s3:::${ModelDataBucket}/*'
-                    - ModelDataBucket: !ImportValue deepracer-event-ModelDataBucket
+                - !Sub 'arn:aws:s3:::${ModelData}'
+                - !Sub 'arn:aws:s3:::${ModelData}/*'
       Environment:
         Variables:
-          DESTINATION_BUCKET: !ImportValue deepracer-event-ModelDataBucket
+          DESTINATION_BUCKET: !Ref ModelData
       CodeUri: ./functions/api_models/
       Events:
         ListModels:
@@ -151,9 +220,7 @@ Resources:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: Access to the public facing load balancer
-      VpcId:
-        Fn::ImportValue:
-          !Sub custom-vpc-${AWS::Region}-VpcId
+      VpcId: !Ref Vpc
       SecurityGroupIngress:
           - Description: Internet http access
             CidrIp: 0.0.0.0/0
@@ -180,9 +247,7 @@ Resources:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: Access to the containers
-      VpcId:
-        Fn::ImportValue:
-          !Sub custom-vpc-${AWS::Region}-VpcId
+      VpcId: !Ref Vpc
       SecurityGroupEgress:
           - Description: All outbound
             CidrIp: 0.0.0.0/0
@@ -231,10 +296,7 @@ Resources:
       Type: application
       Scheme: internet-facing
       IpAddressType: ipv4
-      Subnets: !Split
-        - ','
-        - Fn::ImportValue:
-            !Sub custom-vpc-${AWS::Region}-PublicSubnets
+      Subnets: !Ref PublicSubnets
       SecurityGroups:
         - !Ref SecurityGroupAlb
       LoadBalancerAttributes:
@@ -244,7 +306,7 @@ Resources:
   RecordSet:
     Type: AWS::Route53::RecordSet
     Properties:
-      Name: !Sub ${SubDomainPrefix}.${HostedZoneName}.
+      Name: !Sub ${HostedZoneName}.
       Type: A
       HostedZoneName: !Sub ${HostedZoneName}.
       AliasTarget:
@@ -259,9 +321,7 @@ Resources:
       Protocol: HTTP
       Port: 5000
       TargetType: ip
-      VpcId:
-        Fn::ImportValue:
-          !Sub custom-vpc-${AWS::Region}-VpcId
+      VpcId: !Ref Vpc
       TargetGroupAttributes:
         - Key: deregistration_delay.timeout_seconds
           Value: '5'
@@ -282,9 +342,7 @@ Resources:
       Protocol: HTTP
       Port: 5000
       TargetType: ip
-      VpcId:
-        Fn::ImportValue:
-          !Sub custom-vpc-${AWS::Region}-VpcId
+      VpcId: !Ref Vpc
       TargetGroupAttributes:
         - Key: deregistration_delay.timeout_seconds
           Value: '5'
@@ -315,7 +373,7 @@ Resources:
           EmailSubject: Your access to the Deep Racer Model Uploader application.
           EmailMessage: !Sub |
             Please use this link to access the application from your browser:
-            <a href="https://${SubDomainPrefix}.${HostedZoneName}">https://${SubDomainPrefix}.${HostedZoneName}</a>
+            <a href="https://${HostedZoneName}">https://${HostedZoneName}</a>
 
             Your username is {username} and temporary password is {####}.
             You will be asked to change your password when you first login.
@@ -339,7 +397,7 @@ Resources:
         - COGNITO
       CallbackURLs:
         - !Sub https://${LoadBalancer.DNSName}/oauth2/idpresponse
-        - !Sub https://${SubDomainPrefix}.${HostedZoneName}/oauth2/idpresponse
+        - !Sub https://${HostedZoneName}/oauth2/idpresponse
       AllowedOAuthFlows:
         - code
       AllowedOAuthScopes:
@@ -360,7 +418,7 @@ Resources:
       Protocol: HTTPS
       Port: 443
       Certificates:
-        - CertificateArn: !Sub '{{resolve:ssm:CertificateArn-${HostedZoneName}:1}}'
+        - CertificateArn: !Ref Certificate
       SslPolicy: ELBSecurityPolicy-TLS-1-2-Ext-2018-06
       DefaultActions:
         - Order: 10
@@ -417,12 +475,8 @@ Resources:
                   - s3:GetObject
                   - s3:PutObject
                 Resource:
-                  - !Sub
-                      - 'arn:aws:s3:::${ModelDataBucket}'
-                      - ModelDataBucket: !ImportValue deepracer-event-ModelDataBucket
-                  - !Sub
-                      - 'arn:aws:s3:::${ModelDataBucket}/*'
-                      - ModelDataBucket: !ImportValue deepracer-event-ModelDataBucket
+                  - !Sub 'arn:aws:s3:::${ModelData}'
+                  - !Sub 'arn:aws:s3:::${ModelData}/*'
 
   EcsTaskDefinition:
     Type: AWS::ECS::TaskDefinition
@@ -437,16 +491,16 @@ Resources:
       TaskRoleArn: !GetAtt EcsTaskRole.Arn
       ContainerDefinitions:
         - Name: flask-app
-          Image: !Sub
-            - '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${ECRRepository}:latest'
-            - ECRRepository: !ImportValue deepracer-event-ECRRepository
+          Image: danjhd/dr-event-webapp:latest
           Environment:
             - Name: WEBSERVICE_ENDPOINT
               Value: !Sub https://${ServerlessApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/${ServerlessApiProdStage}
             - Name: API_KEY
               Value: !Select [2, !Split ['/', !Ref 'AWS::StackId']]
             - Name: DESTINATION_BUCKET
-              Value: !ImportValue deepracer-event-ModelDataBucket
+              Value: !Ref ModelData
+            - Name: AWS_ACCOUNT_ID
+              Value: !Ref AWS::AccountID
             - Name: AWS_XRAY_CONTEXT_MISSING
               Value: LOG_ERROR
           PortMappings:
@@ -495,10 +549,7 @@ Resources:
           AssignPublicIp: DISABLED
           SecurityGroups:
             - !Ref SecurityGroupEcs
-          Subnets: !Split
-            - ','
-            - Fn::ImportValue:
-                !Sub custom-vpc-${AWS::Region}-PrivateSubnets
+          Subnets: !Ref PrivateSubnets
       HealthCheckGracePeriodSeconds: 0
       DeploymentController:
         Type: CODE_DEPLOY
@@ -530,416 +581,3 @@ Resources:
       KeyType: API_KEY
       KeyId: !Ref ApiKey
       UsagePlanId: !Ref UsagePlan
-
-  CodeBuildLogGroup:
-    Type: AWS::Logs::LogGroup
-    Properties:
-      LogGroupName: /aws/codebuild/deepracer-event-webapp
-      RetentionInDays: 7
-
-  CodeBuildRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: codebuild.amazonaws.com
-            Action:
-              - sts:AssumeRole
-      Policies:
-        - PolicyName: codebuild
-          PolicyDocument:
-            Version: 2012-10-17
-            Statement:
-              - Effect: Allow
-                Action:
-                  - ecr:GetAuthorizationToken
-                Resource: '*'
-              - Effect: Allow
-                Action:
-                  - ecr:BatchCheckLayerAvailability
-                  - ecr:CompleteLayerUpload
-                  - ecr:InitiateLayerUpload
-                  - ecr:PutImage
-                  - ecr:UploadLayerPart
-                Resource: !Sub
-                  - 'arn:aws:ecr:${AWS::Region}:${AWS::AccountId}:repository/${ECRRepository}'
-                  - ECRRepository: !ImportValue deepracer-event-ECRRepository
-              - Effect: Allow
-                Action:
-                  - logs:CreateLogGroup
-                  - logs:CreateLogStream
-                  - logs:PutLogEvents
-                Resource:
-                  - !GetAtt CodeBuildLogGroup.Arn
-              - Effect: Allow
-                Action:
-                  - codecommit:GitPull
-                Resource: !Sub 'arn:aws:codecommit:${AWS::Region}:${AWS::AccountId}:${AWS::StackName}'
-              - Effect: Allow
-                Action:
-                  - s3:GetObject
-                  - s3:PutObject
-                  - s3:GetObjectVersion
-                Resource: !Sub 'arn:aws:s3:::${CodePipelineBucket}/*'
-              - Effect: Allow
-                Action:
-                  - s3:ListBucket
-                  - s3:GetBucketLocation
-                  - s3:GetBucketVersioning
-                Resource: !Sub 'arn:aws:s3:::${CodePipelineBucket}'
-    Metadata:
-      cfn_nag:
-        rules_to_suppress:
-          - id: W11
-            reason: IAM does not allow resource level policy for these actions.
-
-  CodeBuildProject:
-    Type: AWS::CodeBuild::Project
-    Properties:
-      ServiceRole: !GetAtt CodeBuildRole.Arn
-      Source:
-        Type: CODEPIPELINE
-        BuildSpec: flask-app/buildspec.yml
-      Artifacts:
-        Type: CODEPIPELINE
-      LogsConfig:
-        CloudWatchLogs:
-          Status: ENABLED
-          GroupName: !Ref CodeBuildLogGroup
-      Environment:
-        Type: LINUX_CONTAINER
-        Image: aws/codebuild/amazonlinux2-x86_64-standard:3.0
-        ComputeType: BUILD_GENERAL1_SMALL
-        PrivilegedMode: True
-        EnvironmentVariables:
-          - Name: AWS_ACCOUNT_ID
-            Type: PLAINTEXT
-            Value: !Ref AWS::AccountId
-          - Name: IMAGE_TAG
-            Type: PLAINTEXT
-            Value: latest
-          - Name: IMAGE_REPO_NAME
-            Type: PLAINTEXT
-            Value: !ImportValue deepracer-event-ECRRepository
-          - Name: CODEPIPELINE_BUCKET
-            Type: PLAINTEXT
-            Value: !Ref CodePipelineBucket
-          - Name: WEBSERVICE_ENDPOINT
-            Type: PLAINTEXT
-            Value: !Sub https://${ServerlessApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/${ServerlessApiProdStage}
-          - Name: API_KEY
-            Type: PLAINTEXT
-            Value: !Select [2, !Split ['/', !Ref 'AWS::StackId']]
-          - Name: DESTINATION_BUCKET
-            Type: PLAINTEXT
-            Value: !ImportValue deepracer-event-ModelDataBucket
-          - Name: EXECUTION_ROLE_ARN
-            Type: PLAINTEXT
-            Value: !GetAtt EcsExecutionRole.Arn
-          - Name: TASK_ROLE_ARN
-            Type: PLAINTEXT
-            Value: !GetAtt EcsTaskRole.Arn
-          - Name: LOGS_GROUP
-            Type: PLAINTEXT
-            Value: !Ref LogGroup
-          - Name: FAMILY
-            Type: PLAINTEXT
-            Value: !Select [0, !Split [":", !Select [1, !Split ["/", !Ref EcsTaskDefinition]]]]
-    Metadata:
-      cfn_nag:
-        rules_to_suppress:
-          - id: W32
-            reason: Deliberately choosing to use the default encryption key.
-
-  CodeDeployApplication:
-    Type: AWS::CodeDeploy::Application
-    Properties: 
-      ComputePlatform: ECS
-
-  CodeDeployRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: codedeploy.amazonaws.com
-            Action:
-              - sts:AssumeRole
-      ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/AWSCodeDeployRoleForECS
-      Policies:
-        - PolicyName: codedeploy
-          PolicyDocument:
-            Version: 2012-10-17
-            Statement:
-              - Effect: Allow
-                Action:
-                  - cognito-idp:DescribeUserPoolClient
-                Resource: !GetAtt UserPool.Arn
-
-  CodeDeployDeploymentGroup:
-    Type: Boto3::codedeploy.create_deployment_group
-    Properties:
-      _CustomName: deploymentGroupName
-      _Ref: deploymentGroupName
-      _UpdateAction:
-        Method: update_deployment_group
-        _Ref: currentDeploymentGroupName
-      _DeleteAction:
-        Method: delete_deployment_group
-      applicationName: !Ref CodeDeployApplication
-      deploymentConfigName: CodeDeployDefault.ECSAllAtOnce
-      serviceRoleArn: !GetAtt CodeDeployRole.Arn
-      autoRollbackConfiguration:
-        enabled: True
-        events:
-          - DEPLOYMENT_FAILURE
-          - DEPLOYMENT_STOP_ON_REQUEST
-      deploymentStyle:
-        deploymentType: BLUE_GREEN
-        deploymentOption: WITH_TRAFFIC_CONTROL
-      blueGreenDeploymentConfiguration:
-        terminateBlueInstancesOnDeploymentSuccess:
-          action: TERMINATE
-          terminationWaitTimeInMinutes: 60
-        deploymentReadyOption:
-          actionOnTimeout: CONTINUE_DEPLOYMENT
-          waitTimeInMinutes: 0
-      loadBalancerInfo:
-        targetGroupPairInfoList:
-          - targetGroups:
-              - name: !GetAtt TargetGroupBlue.TargetGroupName
-              - name: !GetAtt TargetGroupGreen.TargetGroupName
-            prodTrafficRoute:
-              listenerArns:
-                - !Ref Listener
-      ecsServices:
-        - clusterName: !Ref FargateCluster
-          serviceName: !GetAtt EcsService.Name
-
-  LambdaVerifyLogGroup:
-    Type: AWS::Logs::LogGroup
-    Properties:
-      LogGroupName: !Sub /aws/lambda/${LambdaVerify}
-      RetentionInDays: 7
-
-  LambdaVerify:
-    Type: AWS::Serverless::Function
-    Properties:
-      Handler: app.lambda_handler
-      Runtime: python3.8
-      Description: Lambda function to verify the Codepipeline trigger.
-      MemorySize: 128
-      Timeout: 30
-      Policies:
-        - AWSLambdaBasicExecutionRole
-        - Version: 2012-10-17
-          Statement:
-            - Effect: Allow
-              Action:
-                - codecommit:GetCommit
-                - codecommit:GetDifferences
-                - codepipeline:PutJobFailureResult
-                - codepipeline:PutJobSuccessResult
-              Resource: '*'
-      Environment:
-        Variables:
-          REPOSITORY_NAME: !Ref AWS::StackName
-          NO_TRIGGER_FOLDER: _no_trigger
-      CodeUri: ./functions/LambdaVerify/
-
-  CodePipelineRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: codepipeline.amazonaws.com
-            Action:
-              - sts:AssumeRole
-      Policies:
-        - PolicyName: codepipeline
-          PolicyDocument:
-            Version: 2012-10-17
-            Statement:
-              - Effect: Allow
-                Action:
-                  - iam:PassRole
-                Resource: '*'
-                Condition:
-                  StringEqualsIfExists:
-                    iam:PassedToService:
-                      - cloudformation.amazonaws.com
-                      - ecs-tasks.amazonaws.com
-              - Effect: Allow
-                Action:
-                  - codecommit:CancelUploadArchive
-                  - codecommit:GetBranch
-                  - codecommit:GetCommit
-                  - codecommit:GetUploadArchiveStatus
-                  - codecommit:UploadArchive
-                Resource: !Sub 'arn:aws:codecommit:${AWS::Region}:${AWS::AccountId}:${AWS::StackName}'
-              - Effect: Allow
-                Action:
-                  - cloudformation:SetStackPolicy
-                  - cloudformation:CreateStack
-                  - cloudformation:DeleteStack
-                  - cloudformation:UpdateStack
-                  - cloudformation:CreateChangeSet
-                  - cloudformation:DescribeChangeSet
-                  - cloudformation:ExecuteChangeSet
-                  - cloudformation:DeleteChangeSet
-                  - cloudformation:DescribeStacks
-                Resource: !Sub 'arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/deepracer-event-webapp/*'
-              - Effect: Allow
-                Action:
-                  - codebuild:BatchGetBuilds
-                  - codebuild:StartBuild
-                Resource: !GetAtt CodeBuildProject.Arn
-              - Effect: Allow
-                Action:
-                  - ecr:DescribeImages
-                Resource: !Sub
-                  - 'arn:aws:ecr:${AWS::Region}:${AWS::AccountId}:repository/${ECRRepository}'
-                  - ECRRepository: !ImportValue deepracer-event-ECRRepository
-              - Effect: Allow
-                Action:
-                  - s3:GetObject
-                  - s3:PutObject
-                  - s3:GetObjectVersion
-                Resource: !Sub 'arn:aws:s3:::${CodePipelineBucket}/*'
-              - Effect: Allow
-                Action:
-                  - codedeploy:GetApplication
-                  - codedeploy:GetApplicationRevision
-                  - codedeploy:RegisterApplicationRevision
-                Resource: !Sub 'arn:aws:codedeploy:${AWS::Region}:${AWS::AccountId}:application:${CodeDeployApplication}'
-              - Effect: Allow
-                Action:
-                  - codedeploy:CreateDeployment
-                  - codedeploy:GetDeployment
-                Resource: !Sub 'arn:aws:codedeploy:${AWS::Region}:${AWS::AccountId}:deploymentgroup:${CodeDeployApplication}/${CodeDeployDeploymentGroup}'
-              - Effect: Allow
-                Action:
-                  - s3:ListBucket
-                  - s3:GetBucketLocation
-                  - s3:GetBucketVersioning
-                Resource: !Sub 'arn:aws:s3:::${CodePipelineBucket}'
-              - Effect: Allow
-                Action:
-                  - ecs:DescribeServices
-                  - ecs:UpdateService
-                Resource: !Sub 'arn:aws:ecs:${AWS::Region}:${AWS::AccountId}:service/${EcsService.Name}'
-              - Effect: Allow
-                Action:
-                  - lambda:InvokeFunction
-                  - lambda:ListFunctions
-                Resource: '*'
-              - Effect: Allow
-                Action:
-                  - ecs:DescribeTasks
-                  - ecs:ListTasks
-                  - ecs:RegisterTaskDefinition
-                  - ecs:DescribeTaskDefinition
-                  - cloudformation:ValidateTemplate
-                  - codedeploy:GetDeploymentConfig
-                Resource: '*'
-    Metadata:
-      cfn_nag:
-        rules_to_suppress:
-          - id: F38
-            reason: Codepipeline requires action:*.
-          - id: W11
-            reason: IAM does not allow resource level policy for these actions.
-
-  CodePipeline:
-    Type: AWS::CodePipeline::Pipeline
-    Properties:
-      RoleArn: !GetAtt CodePipelineRole.Arn
-      ArtifactStore:
-        Type: S3
-        Location: !Ref CodePipelineBucket
-      Stages:
-        - Name: Source
-          Actions:
-            - Name: CodeCommit
-              RunOrder: 1
-              ActionTypeId:
-                Category: Source
-                Owner: AWS
-                Provider: CodeCommit
-                Version: '1'
-              Configuration:
-                BranchName: master
-                RepositoryName: !Ref AWS::StackName
-              OutputArtifacts:
-                - Name: SourceArtifact
-        - Name: Verify
-          Actions:
-            - Name: VerifyTrigger
-              ActionTypeId:
-                Category: Invoke
-                Owner: AWS
-                Provider: Lambda
-                Version: '1'
-              Configuration:
-                FunctionName: !Ref LambdaVerify
-              InputArtifacts:
-                - Name: SourceArtifact
-        - Name: Build
-          Actions:
-            - Name: CodeBuild
-              RunOrder: 1
-              ActionTypeId:
-                Category: Build
-                Owner: AWS
-                Provider: CodeBuild
-                Version: '1'
-              Configuration:
-                ProjectName: !Ref CodeBuildProject
-              InputArtifacts:
-                - Name: SourceArtifact
-              OutputArtifacts:
-                - Name: BuildArtifact
-        - Name: Deploy
-          Actions:
-            - Name: CloudFormation
-              RunOrder: 1
-              ActionTypeId:
-                Category: Deploy
-                Owner: AWS
-                Provider: CloudFormation
-                Version: '1'
-              InputArtifacts:
-                - Name: BuildArtifact
-              Configuration:
-                ActionMode: CREATE_UPDATE
-                StackName: !Ref AWS::StackName
-                Capabilities: CAPABILITY_IAM,CAPABILITY_NAMED_IAM,CAPABILITY_AUTO_EXPAND
-                RoleArn: !ImportValue deepracer-event-CloudFormationRole
-                TemplatePath: BuildArtifact::package-template.yaml
-            - Name: CodeDeploy
-              RunOrder: 2
-              ActionTypeId:
-                Category: Deploy
-                Owner: AWS
-                Provider: CodeDeployToECS
-                Version: '1'
-              InputArtifacts:
-                - Name: BuildArtifact
-              Configuration:
-                ApplicationName: !Ref CodeDeployApplication
-                DeploymentGroupName: !Ref CodeDeployDeploymentGroup
-                TaskDefinitionTemplateArtifact: BuildArtifact
-                TaskDefinitionTemplatePath: taskdef.json
-                AppSpecTemplateArtifact: BuildArtifact
-                AppSpecTemplatePath: appspec.yaml
-                Image1ArtifactName: BuildArtifact
-                Image1ContainerName: IMAGE_NAME
