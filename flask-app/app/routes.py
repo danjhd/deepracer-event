@@ -2,12 +2,13 @@ import json
 import os
 import boto3
 import requests
+from io import BytesIO
+from aws_xray_sdk.core import patch_all
 from botocore.exceptions import ClientError
 from flask import flash, redirect, render_template, request, send_file, url_for
 from werkzeug.utils import secure_filename
 from app import app
 from app.forms import RoleForm, S3Form
-from aws_xray_sdk.core import patch_all
 from flask_babel import _
 
 patch_all()
@@ -19,11 +20,19 @@ def index():
 @app.route('/role', methods=['GET'])
 def role():
     form = RoleForm()
-    return render_template('role.html.j2', title='Deep Racer Model Uploader', form=form)
+    return render_template('role.html.j2', title='Deep Racer Model Uploader', form=form, account_id=os.environ['AWS_ACCOUNT_ID'])
 
 @app.route('/downloads/<path>')
 def downloadFile (path):
-    return send_file(f'./downloads/{path}', as_attachment=True)
+    pathFull = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'downloads', path)
+    f = open(pathFull, mode='r')
+    fileContent = f.read()
+    f.close()
+    fileContent = fileContent.replace('{{ EventAccountId }}', os.environ['AWS_ACCOUNT_ID'])
+    mem = BytesIO()
+    mem.write(fileContent.encode('utf-8'))
+    mem.seek(0)
+    return send_file(mem, attachment_filename=path, as_attachment=True)
 
 @app.route('/model', methods=['GET'])
 def model():

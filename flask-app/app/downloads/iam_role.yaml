@@ -20,7 +20,7 @@ Metadata:
 Parameters:
 
   DeepRacerBucketName:
-    Description: The name (not ARN) of the S3 Bucket used for Deep Racer training jobs outputs. This can be found by checking Sagemaker training jobs carried out by Deep Racer and looking at where the output is stored.
+    Description: The name (not ARN) of the S3 Bucket used for Deep Racer training jobs outputs. This can be found by checking the list of S3 buckets and locating the one with name that begins with aws-deepracer-.
     Type: String
     AllowedPattern: '^aws\-deepracer\-[0-9a-z]{8}\-[0-9a-z]{4}\-[0-9a-z]{4}\-[0-9a-z]{4}\-[0-9a-z]{12}$'
     ConstraintDescription: aws-deepracer-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
@@ -44,7 +44,7 @@ Resources:
           - Effect: Allow
             Action: sts:AssumeRole
             Principal:
-              AWS: 409650071325
+              AWS: '{{ EventAccountId }}'
       Policies:
         - PolicyName: Access-DeepRacer-Models
           PolicyDocument:
