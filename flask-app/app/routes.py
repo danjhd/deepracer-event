@@ -20,7 +20,7 @@ def index():
 @app.route('/role', methods=['GET'])
 def role():
     form = RoleForm()
-    return render_template('role.html.j2', title='Deep Racer Model Uploader', form=form, account_id=os.environ['AWS_ACCOUNT_ID'])
+    return render_template('role.html.j2', title='Deep Racer Model Uploader', form=form, account_id=app.config['AWS_ACCOUNT_ID'])
 
 @app.route('/downloads/<path>')
 def downloadFile (path):
@@ -28,7 +28,7 @@ def downloadFile (path):
     f = open(pathFull, mode='r')
     fileContent = f.read()
     f.close()
-    fileContent = fileContent.replace('{{ EventAccountId }}', os.environ['AWS_ACCOUNT_ID'])
+    fileContent = fileContent.replace('{{ EventAccountId }}', app.config['AWS_ACCOUNT_ID'])
     mem = BytesIO()
     mem.write(fileContent.encode('utf-8'))
     mem.seek(0)

@@ -5,6 +5,7 @@ class Config(object):
     LANGUAGES = ['en', 'de', 'pt']
     WEBSERVICE_ENDPOINT = os.environ.get('WEBSERVICE_ENDPOINT')
     API_KEY = os.environ.get('API_KEY')
+    ACCOUNT_ID = os.environ.get('ACCOUNT_ID')
     DESTINATION_BUCKET = os.environ.get('DESTINATION_BUCKET')
     WEB_ICONS = {
         'tick': '<svg class="bi bi-check text-success" width="32" height="32" viewBox="0 -4 20 20" fill="green" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M13.854 3.646a.5.5 0 010 .708l-7 7a.5.5 0 01-.708 0l-3.5-3.5a.5.5 0 11.708-.708L6.5 10.293l6.646-6.647a.5.5 0 01.708 0z" clip-rule="evenodd"/></svg>',
