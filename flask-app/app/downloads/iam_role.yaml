@@ -7,7 +7,7 @@ Resources:
   DeepRacerRole:
     Type: AWS::IAM::Role
     Properties:
-      Description: A role that Greengrass will assume when excuting a Lambda Function.
+      Description: A role that the Deep Racer Model Uploader will assume.
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -21,8 +21,11 @@ Resources:
             Version: '2012-10-17'
             Statement:
               - Effect: Allow
-                Action: 's3:ListBucket'
+                Action: 's3:ListAllMyBuckets'
                 Resource: '*'
+              - Effect: Allow
+                Action: 's3:ListBucket'
+                Resource: 'arn:aws:s3:::aws-deepracer-*'
               - Effect: Allow
                 Action: 's3:GetObject'
                 Resource: 'arn:aws:s3:::aws-deepracer-*/*'
@@ -33,4 +36,4 @@ Resources:
       cfn_nag:
         rules_to_suppress:
           - id: W11
-            reason: s3:ListBucket required for all buckets
+            reason: s3:ListAllMyBuckets required for all buckets

@@ -4,8 +4,13 @@
     &nbsp;&nbsp;"Statement": [<br/>
     &nbsp;&nbsp;&nbsp;&nbsp;{<br/>
     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"Effect": "Allow",<br/>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"Action": "s3:ListAllMyBuckets",<br/>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"Resource": "*"<br/>
+    &nbsp;&nbsp;&nbsp;&nbsp;},<br/>
+    &nbsp;&nbsp;&nbsp;&nbsp;{<br/>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"Effect": "Allow",<br/>
     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"Action": "s3:ListBucket",<br/>
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"Resource": "arn:aws:s3:::*"<br/>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"Resource": "arn:aws:s3:::aws-deepracer-*"<br/>
     &nbsp;&nbsp;&nbsp;&nbsp;},<br/>
     &nbsp;&nbsp;&nbsp;&nbsp;{<br/>
     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"Effect": "Allow",<br/>
