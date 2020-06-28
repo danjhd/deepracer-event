@@ -23,7 +23,7 @@ def lambda_handler(event, context):
         if event['resource'] == '/models':
             logger.info('API call for "get model list" received...')
 ### List Models ###
-            # Set region to us-east-1 is not supplied, since Deep Racer is only available in us-east-1 at present.
+            # Set region to us-east-1 if not supplied, since Deep Racer is only available in us-east-1 at present.
             source_region = 'us-east-1' if 'Region' not in event['queryStringParameters'] else event['queryStringParameters']['Region']
             logger.info(f'Sagemaker region set to {source_region}.')
             # Get Deep Racer Models
@@ -130,23 +130,21 @@ def GetDeepRacerModels(creds, region, src_account):
     # Create clients to use
     sagemaker, src_s3 = GetClients(creds, region)
     models = {}
-    # Paginate through all training jobs looking for ones that match possible Deep Racer jobs
-    for training_job_summaries in sagemaker.get_paginator('list_training_jobs').paginate(NameContains='dr-sm-rltj', StatusEquals='Stopped'):
-        # Loop through returned training job summaries
-        for training_job in training_job_summaries['TrainingJobSummaries']:
-            # Retrieve the job details we require for Deep Racer jobs
-            model = GetDeepRacerModelInfo(sagemaker, src_s3, {'TrainingJobName': training_job['TrainingJobName'], 'Region': region}, src_account)
-            # Only retain models that still exist
-            if model.pop('S3ModelArtifacts', None):
-                # Extract the model name and use it as the key to determine if we have duplicates
-                model_name = model.pop('ModelName')
-                if model_name in models:
-                    # Duplicate found. Replace the existing info if the model is newer (training job name contains dt in YYYYMMDDHHMMSS format)
-                    if models[model_name]['Region'] == model['Region'] and models[model_name]['TrainingJobName'] > model['TrainingJobName']:
+    for bucket in src_s3.buckets.all():
+        # Find the S3 bucket used by DeepRacer
+        if bucket.name.startswith('aws-deepracer-'):
+            for o in bucket.objects.filter(Prefix='DeepRacer-SageMaker-rlmdl-'):
+                # Just keys for model files only
+                if o.key.endswith('model.tar.gz'):
+                    model = GetDeepRacerModelInfo(sagemaker, src_s3, {'TrainingJobName': o.key.split('/')[1], 'Region': region}, src_account)
+                    model_name = model.pop('ModelName')
+                    if model_name in models:
+                        # Duplicate found. Replace the existing info if the model is newer (training job name contains dt in YYYYMMDDHHMMSS format)
+                        if models[model_name]['Region'] == model['Region'] and models[model_name]['TrainingJobName'] > model['TrainingJobName']:
+                            models[model_name] = model
+                    # No duplicate so just add it to the dict
+                    else:
                         models[model_name] = model
-                # No duplicate so just add it to the dict
-                else:
-                    models[model_name] = model
     # Convert the dict to an list so that we can sort it
     models = [v.update({'ModelName': k}) or v for k,v in models.items()]
     # Return the sorted list
@@ -175,13 +173,8 @@ def GetClients(creds, region):
 def GetDeepRacerModelInfo(sagemaker, src_s3, model, src_account):
     # Get training job details
     training_job = sagemaker.describe_training_job(TrainingJobName = model['TrainingJobName'])
-    # Use regex to parse the reward function path hyper parameter
-    match = re.search(r'.*\/reward-functions\/(.*)\/reward_function\.py', training_job['HyperParameters']['reward_function_s3_source'])
-    # Set Deep Racer Model name
-    model['ModelName'] = match.group(1)
-    # Set the S3ModelArtifacts property with the artifact location only if the artifact still exists in S3
-    if S3ObjectExists(src_s3, training_job['ModelArtifacts']['S3ModelArtifacts']):
-        model['S3ModelArtifacts'] = training_job['ModelArtifacts']['S3ModelArtifacts']
+    # Split the s3 path for the reward function path hyper parameter to extract the model name
+    model['ModelName'] = training_job['HyperParameters']['reward_function_s3_source'].split('/')[4]
     # Set the uploaded property based upon whether a model with the same name already exists in our S3 bucket therefore indicating the model has already been uploaded.
     model['Uploaded'] = S3ObjectExists(boto3.resource('s3'), os.environ['DESTINATION_BUCKET'], f"{model['ModelName']}-{src_account}-{model['Region']}.tar.gz")
     return model
