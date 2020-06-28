@@ -2,36 +2,6 @@ AWSTemplateFormatVersion: '2010-09-09'
 
 Description: An IAM Role to allow Deep Racer event team to collect Deep Racer Models cross account.
 
-Metadata:
-
-  AWS::CloudFormation::Interface:
-    ParameterGroups:
-      - Label:
-          default: Deep Racer details
-        Parameters:
-          - DeepRacerBucketName
-          - DeepRacerRegion
-    ParameterLabels:
-      DeepRacerBucketName:
-        default: DeepRacer Output S3 Bucket Name
-      DeepRacerRegion:
-        default: Deep Racer region used
-
-Parameters:
-
-  DeepRacerBucketName:
-    Description: The name (not ARN) of the S3 Bucket used for Deep Racer training jobs outputs. This can be found by checking the list of S3 buckets and locating the one with name that begins with aws-deepracer-.
-    Type: String
-    AllowedPattern: '^aws\-deepracer\-[0-9a-z]{8}\-[0-9a-z]{4}\-[0-9a-z]{4}\-[0-9a-z]{4}\-[0-9a-z]{12}$'
-    ConstraintDescription: aws-deepracer-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-
-  DeepRacerRegion:
-    Description: us-east-1 is the only available option at present.
-    Type: String
-    AllowedValues:
-      - us-east-1
-    Default: us-east-1
-
 Resources:
 
   DeepRacerRole:
@@ -51,24 +21,16 @@ Resources:
             Version: '2012-10-17'
             Statement:
               - Effect: Allow
-                Action: 'sagemaker:ListTrainingJobs'
+                Action: 's3:ListBucket'
                 Resource: '*'
               - Effect: Allow
-                Action: 'sagemaker:DescribeTrainingJob'
-                Resource: !Sub 'arn:aws:sagemaker:${DeepRacerRegion}:${AWS::AccountId}:training-job/dr-sm-rltj*'
-              - Effect: Allow
                 Action: 's3:GetObject'
-                Resource: !Sub 'arn:aws:s3:::${DeepRacerBucketName}/*'
+                Resource: 'arn:aws:s3:::aws-deepracer-*/*'
               - Effect: Allow
-                Action: 's3:ListBucket'
-                Resource: !Sub 'arn:aws:s3:::${DeepRacerBucketName}'
+                Action: 'sagemaker:DescribeTrainingJob'
+                Resource: !Sub 'arn:aws:sagemaker:us-east-1:${AWS::AccountId}:training-job/dr-sm-rltj*'
     Metadata:
       cfn_nag:
         rules_to_suppress:
           - id: W11
-            reason: sagemaker:ListTrainingJobs does not allow resource level permissions
-
-Outputs:
-
-  RoleArn:
-    Value: !GetAtt DeepRacerRole.Arn
+            reason: s3:ListBucket required for all buckets
