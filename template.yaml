@@ -6,14 +6,9 @@ Description: Deploys the Python-Flask Web App and API gateway used to put a user
 
 Parameters:
 
-  Vpc:
-    Type: AWS::EC2::VPC::Id
-
-  PublicSubnets:
-    Type: List<AWS::EC2::Subnet::Id>
-
-  PrivateSubnets:
-    Type: List<AWS::EC2::Subnet::Id>
+  ContainerImageLocation:
+    Type: String
+    Default: danjhd/dr-event-webapp:latest
 
   HostedZoneName:
     Description: The Route53 hosted zone name to use.
@@ -38,183 +33,198 @@ Conditions:
 
 Resources:
 
-  Certificate:
-    Type: AWS::CertificateManager::Certificate
-    Properties: 
-      DomainName: !Ref HostedZoneName
-      DomainValidationOptions: 
-        - DomainName: !Ref HostedZoneName
-          HostedZoneId: !Ref HostedZoneId
-      SubjectAlternativeNames: 
-        - !Sub '*.${HostedZoneName}'
-      ValidationMethod: DNS
-
-  SQSQueue:
-    Type: AWS::SQS::Queue
-
-  SQSQueuePolicy:
-    Type: AWS::SQS::QueuePolicy
+  Vpc:
+    Type: AWS::EC2::VPC
     Properties:
-      Queues:
-        - !Ref SQSQueue
-      PolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Effect: Allow
-            Action:
-              - sqs:SendMessage
-            Resource:
-              - !GetAtt SQSQueue.Arn
-            Principal:
-              Service: s3.amazonaws.com
-            Condition:
-              ArnLike:
-                'aws:SourceArn': !Sub 'arn:aws:s3:*:*:${ModelData}'
+      CidrBlock: 10.0.0.0/22
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      InstanceTenancy: default
+      Tags:
+        - Key: Name
+          Value: deepracer-event
 
-  ModelData:
-    Type: AWS::S3::Bucket
+  Igw:
+    Type: AWS::EC2::InternetGateway
     Properties:
-      PublicAccessBlockConfiguration:
-        BlockPublicAcls: True
-        BlockPublicPolicy: True
-        IgnorePublicAcls: True
-        RestrictPublicBuckets: True
-      BucketEncryption:
-        ServerSideEncryptionConfiguration:
-          - ServerSideEncryptionByDefault:
-              SSEAlgorithm: AES256
-      NotificationConfiguration: !If
-        - S3Trigger
-        - QueueConfigurations:
-            - Queue: !GetAtt SQSQueue.Arn
-              Event: 's3:ObjectCreated:*'
-            - Queue: !GetAtt SQSQueue.Arn
-              Event: 's3:ObjectRemoved:*'
-        - !Ref AWS::NoValue
+      Tags:
+        - Key: Name
+          Value: deepracer-event
+
+  GatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref Vpc
+      InternetGatewayId: !Ref Igw
+
+  NatEip1:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+      Tags:
+        - Key: Name
+          Value: deepracer-event-nat-1
+
+  NatEip2:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+      Tags:
+        - Key: Name
+          Value: deepracer-event-nat-2
+
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: 10.0.0.0/24
+      VpcId: !Ref Vpc
+      AvailabilityZone: !Select [0, !GetAZs '']
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: deepracer-event-Public-1
     Metadata:
       cfn_nag:
         rules_to_suppress:
-          - id: W35
-            reason: No logging required
+          - id: W33
+            reason: Public Subnet therefore MapPublicIpOnLaunch is desired.
 
-  CodePipelineBucket:
-    Type: AWS::S3::Bucket
+  PublicSubnet2:
+    Type: AWS::EC2::Subnet
     Properties:
-      BucketName: !Sub codepipeline-${AWS::AccountId}-${AWS::Region}-${AWS::StackName}
+      CidrBlock: 10.0.1.0/24
+      VpcId: !Ref Vpc
+      AvailabilityZone: !Select [1, !GetAZs '']
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: deepracer-event-Public-2
     Metadata:
       cfn_nag:
         rules_to_suppress:
-          - id: W35
-            reason: Access logging deliberately not enabled.
-          - id: W41
-            reason: Encryption deliberately not enabled.
+          - id: W33
+            reason: Public Subnet therefore MapPublicIpOnLaunch is desired.
 
-  BucketPolicy:
-    Type: AWS::S3::BucketPolicy
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet
     Properties:
-      Bucket: !Ref CodePipelineBucket
-      PolicyDocument:
-        Statement:
-          - Sid: DenyUnEncryptedObjectUploads
-            Principal: '*'
-            Effect: Deny
-            Action:
-              - s3:PutObject
-            Resource:
-              - !Sub 'arn:aws:s3:::${CodePipelineBucket}/*'
-            Condition:
-              StringNotEquals:
-                's3:x-amz-server-side-encryption': 'aws:kms'
-          - Sid: DenyInsecureConnections
-            Principal: '*'
-            Effect: Deny
-            Action:
-              - s3:*
-            Resource:
-              - !Sub 'arn:aws:s3:::${CodePipelineBucket}/*'
-            Condition:
-              Bool:
-                'aws:SecureTransport': False
+      CidrBlock: 10.0.2.0/24
+      VpcId: !Ref Vpc
+      AvailabilityZone: !Select [0, !GetAZs '']
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: deepracer-event-Private-1
 
-  ServerlessApi:
-    Type: AWS::Serverless::Api
+  PrivateSubnet2:
+    Type: AWS::EC2::Subnet
     Properties:
-      Auth:
-        ApiKeyRequired: True
-      EndpointConfiguration: REGIONAL
-      StageName: Prod
-      TracingEnabled: True
+      CidrBlock: 10.0.3.0/24
+      VpcId: !Ref Vpc
+      AvailabilityZone: !Select [1, !GetAZs '']
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: deepracer-event-Private-2
 
-  ModelsFunction:
-    Type: AWS::Serverless::Function
+  NatGateway1:
+    Type: AWS::EC2::NatGateway
     Properties:
-      Runtime: python3.8
-      Handler: app.lambda_handler
-      MemorySize: 128
-      Timeout: 900
-      Tracing: Active
-      Policies:
-        - Version: '2012-10-17'
-          Statement:
-            - Effect: Allow
-              Action:
-                - sts:AssumeRole
-              Resource:
-                - '*'
-            - Effect: Allow
-              Action:
-                - s3:ListBucket
-                - s3:GetObject
-                - s3:PutObject
-                - s3:DeleteObject
-              Resource:
-                - !Sub 'arn:aws:s3:::${ModelData}'
-                - !Sub 'arn:aws:s3:::${ModelData}/*'
-      Environment:
-        Variables:
-          DESTINATION_BUCKET: !Ref ModelData
-      CodeUri: ./functions/api_models/
-      Events:
-        ListModels:
-          Type: Api
-          Properties:
-            RestApiId: !Ref ServerlessApi
-            Path: /models
-            Method: GET
-            RequestParameters:
-            - method.request.querystring.RoleArn:
-                Required: True
-                Caching: False
-            - method.request.querystring.Region:
-                Required: False
-                Caching: False
-        CopyModel:
-          Type: Api
-          Properties:
-            RestApiId: !Ref ServerlessApi
-            Path: /models/{Region}/{JobId}
-            Method: GET
-            RequestParameters:
-            - method.request.querystring.RoleArn:
-                Required: True
-                Caching: False
-        DeleteModel:
-          Type: Api
-          Properties:
-            RestApiId: !Ref ServerlessApi
-            Path: /models/{Region}/{JobId}
-            Method: DELETE
-            RequestParameters:
-            - method.request.querystring.RoleArn:
-                Required: True
-                Caching: False
+      AllocationId: !GetAtt NatEip1.AllocationId
+      SubnetId: !Ref PublicSubnet1
+      Tags:
+        - Key: Name
+          Value: deepracer-event-1
 
-  FargateCluster:
-    Type: AWS::ECS::Cluster
+  NatGateway2:
+    Type: AWS::EC2::NatGateway
     Properties:
-      ClusterSettings:
-        - Name: containerInsights
-          Value:  enabled
+      AllocationId: !GetAtt NatEip2.AllocationId
+      SubnetId: !Ref PublicSubnet2
+      Tags:
+        - Key: Name
+          Value: deepracer-event-2
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref Vpc
+      Tags:
+        - Key: Name
+          Value: deepracer-event-Public
+
+  PrivateRouteTable1:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref Vpc
+      Tags:
+        - Key: Name
+          Value: deepracer-event-Private-1
+
+  PrivateRouteTable2:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref Vpc
+      Tags:
+        - Key: Name
+          Value: deepracer-event-Private-2
+
+  PublicAssociation1:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnet1
+
+  PublicAssociation2:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnet2
+
+  PrivateAssociation1:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable1
+      SubnetId: !Ref PrivateSubnet1
+
+  PrivateAssociation2:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable2
+      SubnetId: !Ref PrivateSubnet2
+
+  PublicDefaultRoute:
+    Type: AWS::EC2::Route
+    DependsOn: GatewayAttachment
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref Igw
+
+  PrivateDefaultRoute1:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable1
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway1
+
+  PrivateDefaultRoute2:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable2
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway2
+
+  EndpointS3:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcEndpointType: Gateway
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.s3
+      VpcId: !Ref Vpc
+      RouteTableIds:
+        - Ref: PublicRouteTable
+        - Ref: PrivateRouteTable1
+        - Ref: PrivateRouteTable2
 
   SecurityGroupAlb:
     Type: AWS::EC2::SecurityGroup
@@ -290,71 +300,79 @@ Resources:
       FromPort: 2000
       ToPort: 2000
 
+  ModelData:
+    Type: AWS::S3::Bucket
+    Properties:
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: True
+        BlockPublicPolicy: True
+        IgnorePublicAcls: True
+        RestrictPublicBuckets: True
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      NotificationConfiguration: !If
+        - S3Trigger
+        - QueueConfigurations:
+            - Queue: !GetAtt SQSQueue.Arn
+              Event: 's3:ObjectCreated:*'
+            - Queue: !GetAtt SQSQueue.Arn
+              Event: 's3:ObjectRemoved:*'
+        - !Ref AWS::NoValue
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W35
+            reason: No logging required
+
+  SQSQueue:
+    Type: AWS::SQS::Queue
+
+  SQSQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref SQSQueue
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - sqs:SendMessage
+            Resource:
+              - !GetAtt SQSQueue.Arn
+            Principal:
+              Service: s3.amazonaws.com
+            Condition:
+              ArnLike:
+                'aws:SourceArn': !Sub 'arn:aws:s3:*:*:${ModelData}'
+
   LoadBalancer:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
       Type: application
       Scheme: internet-facing
       IpAddressType: ipv4
-      Subnets: !Ref PublicSubnets
+      Subnets:
+        - !Ref PublicSubnet1
+        - !Ref PublicSubnet2
       SecurityGroups:
         - !Ref SecurityGroupAlb
       LoadBalancerAttributes:
         - Key: idle_timeout.timeout_seconds
           Value: '30'
 
-  RecordSet:
-    Type: AWS::Route53::RecordSet
-    Properties:
-      Name: !Sub ${HostedZoneName}.
-      Type: A
-      HostedZoneName: !Sub ${HostedZoneName}.
-      AliasTarget:
-        HostedZoneId: !GetAtt LoadBalancer.CanonicalHostedZoneID
-        DNSName: !GetAtt LoadBalancer.DNSName
-        EvaluateTargetHealth: True
-
-  TargetGroupBlue:
-    Type: AWS::ElasticLoadBalancingV2::TargetGroup
-    DependsOn: LoadBalancer
-    Properties:
-      Protocol: HTTP
-      Port: 5000
-      TargetType: ip
-      VpcId: !Ref Vpc
-      TargetGroupAttributes:
-        - Key: deregistration_delay.timeout_seconds
-          Value: '5'
-      HealthCheckProtocol: HTTP
-      HealthCheckPath: /
-      HealthCheckPort: traffic-port
-      HealthyThresholdCount: 2
-      UnhealthyThresholdCount: 2
-      HealthCheckTimeoutSeconds: 2
-      HealthCheckIntervalSeconds: 5
-      Matcher:
-        HttpCode: '200'
-
-  TargetGroupGreen:
-    Type: AWS::ElasticLoadBalancingV2::TargetGroup
-    DependsOn: LoadBalancer
-    Properties:
-      Protocol: HTTP
-      Port: 5000
-      TargetType: ip
-      VpcId: !Ref Vpc
-      TargetGroupAttributes:
-        - Key: deregistration_delay.timeout_seconds
-          Value: '5'
-      HealthCheckProtocol: HTTP
-      HealthCheckPath: /
-      HealthCheckPort: traffic-port
-      HealthyThresholdCount: 2
-      UnhealthyThresholdCount: 2
-      HealthCheckTimeoutSeconds: 2
-      HealthCheckIntervalSeconds: 5
-      Matcher:
-        HttpCode: '200'
+  Certificate:
+    Type: AWS::CertificateManager::Certificate
+    Properties: 
+      DomainName: !Ref HostedZoneName
+      DomainValidationOptions: 
+        - DomainName: !Ref HostedZoneName
+          HostedZoneId: !Ref HostedZoneId
+      SubjectAlternativeNames: 
+        - !Sub '*.${HostedZoneName}'
+      ValidationMethod: DNS
 
   UserPool:
     Type: AWS::Cognito::UserPool
@@ -431,11 +449,54 @@ Resources:
           Type: forward
           TargetGroupArn: !Ref TargetGroupBlue
 
-  LogGroup:
-    Type: AWS::Logs::LogGroup
-    Properties: 
-      LogGroupName: /ecs/deepracer-event-webapp
-      RetentionInDays: 7
+  TargetGroupBlue:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    DependsOn: LoadBalancer
+    Properties:
+      Protocol: HTTP
+      Port: 5000
+      TargetType: ip
+      VpcId: !Ref Vpc
+      TargetGroupAttributes:
+        - Key: deregistration_delay.timeout_seconds
+          Value: '5'
+      HealthCheckProtocol: HTTP
+      HealthCheckPath: /
+      HealthCheckPort: traffic-port
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 2
+      HealthCheckTimeoutSeconds: 2
+      HealthCheckIntervalSeconds: 5
+      Matcher:
+        HttpCode: '200'
+
+  TargetGroupGreen:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    DependsOn: LoadBalancer
+    Properties:
+      Protocol: HTTP
+      Port: 5000
+      TargetType: ip
+      VpcId: !Ref Vpc
+      TargetGroupAttributes:
+        - Key: deregistration_delay.timeout_seconds
+          Value: '5'
+      HealthCheckProtocol: HTTP
+      HealthCheckPath: /
+      HealthCheckPort: traffic-port
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 2
+      HealthCheckTimeoutSeconds: 2
+      HealthCheckIntervalSeconds: 5
+      Matcher:
+        HttpCode: '200'
+
+  FargateCluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterSettings:
+        - Name: containerInsights
+          Value:  enabled
 
   EcsExecutionRole:
     Type: AWS::IAM::Role
@@ -491,7 +552,7 @@ Resources:
       TaskRoleArn: !GetAtt EcsTaskRole.Arn
       ContainerDefinitions:
         - Name: flask-app
-          Image: danjhd/dr-event-webapp:latest
+          Image: !Ref ContainerImageLocation
           Environment:
             - Name: WEBSERVICE_ENDPOINT
               Value: !Sub https://${ServerlessApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/${ServerlessApiProdStage}
@@ -500,7 +561,7 @@ Resources:
             - Name: DESTINATION_BUCKET
               Value: !Ref ModelData
             - Name: AWS_ACCOUNT_ID
-              Value: !Ref AWS::AccountID
+              Value: !Ref AWS::AccountId
             - Name: AWS_XRAY_CONTEXT_MISSING
               Value: LOG_ERROR
           PortMappings:
@@ -549,11 +610,104 @@ Resources:
           AssignPublicIp: DISABLED
           SecurityGroups:
             - !Ref SecurityGroupEcs
-          Subnets: !Ref PrivateSubnets
+          Subnets:
+            - !Ref PrivateSubnet1
+            - !Ref PrivateSubnet2
       HealthCheckGracePeriodSeconds: 0
       DeploymentController:
         Type: CODE_DEPLOY
       EnableECSManagedTags: True
+
+  LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      LogGroupName: /ecs/deepracer-event-webapp
+      RetentionInDays: 7
+
+  ServerlessApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      Auth:
+        ApiKeyRequired: True
+      EndpointConfiguration: REGIONAL
+      StageName: Prod
+      TracingEnabled: True
+
+  ModelsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Runtime: python3.8
+      Handler: app.lambda_handler
+      Layers:
+        - !Ref ModelsLayer
+      MemorySize: 128
+      Timeout: 900
+      Tracing: Active
+      Policies:
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - sts:AssumeRole
+              Resource:
+                - '*'
+            - Effect: Allow
+              Action:
+                - s3:ListBucket
+                - s3:GetObject
+                - s3:PutObject
+                - s3:DeleteObject
+              Resource:
+                - !Sub 'arn:aws:s3:::${ModelData}'
+                - !Sub 'arn:aws:s3:::${ModelData}/*'
+      Environment:
+        Variables:
+          DESTINATION_BUCKET: !Ref ModelData
+      CodeUri: ./functions/api_models/
+      Events:
+        ListModels:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ServerlessApi
+            Path: /models
+            Method: GET
+            RequestParameters:
+            - method.request.querystring.RoleArn:
+                Required: True
+                Caching: False
+            - method.request.querystring.Region:
+                Required: False
+                Caching: False
+        CopyModel:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ServerlessApi
+            Path: /models/{Region}/{JobId}
+            Method: GET
+            RequestParameters:
+            - method.request.querystring.RoleArn:
+                Required: True
+                Caching: False
+        DeleteModel:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ServerlessApi
+            Path: /models/{Region}/{JobId}
+            Method: DELETE
+            RequestParameters:
+            - method.request.querystring.RoleArn:
+                Required: True
+                Caching: False
+
+  ModelsLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      Description: Dependencies for Models Function
+      ContentUri: ./functions/api_models/layer/
+      CompatibleRuntimes:
+        - python3.8
+    Metadata:
+      BuildMethod: python3.8
 
   ApiKey:
     Type: AWS::ApiGateway::ApiKey
@@ -564,6 +718,7 @@ Resources:
         - RestApiId: !Ref ServerlessApi
           StageName: Prod
       Value: !Select [2, !Split ['/', !Ref 'AWS::StackId']]
+      Enabled: True
 
   UsagePlan:
     Type: AWS::ApiGateway::UsagePlan
@@ -581,3 +736,14 @@ Resources:
       KeyType: API_KEY
       KeyId: !Ref ApiKey
       UsagePlanId: !Ref UsagePlan
+
+  RecordSet:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      Name: !Sub ${HostedZoneName}.
+      Type: A
+      HostedZoneId: !Ref HostedZoneId
+      AliasTarget:
+        HostedZoneId: !GetAtt LoadBalancer.CanonicalHostedZoneID
+        DNSName: !GetAtt LoadBalancer.DNSName
+        EvaluateTargetHealth: True
