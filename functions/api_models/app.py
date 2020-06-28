@@ -136,7 +136,7 @@ def GetDeepRacerModels(creds, region, src_account):
             for o in bucket.objects.filter(Prefix='DeepRacer-SageMaker-rlmdl-'):
                 # Just keys for model files only
                 if o.key.endswith('model.tar.gz'):
-                    model = GetDeepRacerModelInfo(sagemaker, src_s3, {'TrainingJobName': o.key.split('/')[1], 'Region': region}, src_account)
+                    model = GetDeepRacerModelInfo(sagemaker, src_s3, {'S3ModelArtifacts': o.key, 'TrainingJobName': o.key.split('/')[1], 'Region': region}, src_account)
                     model_name = model.pop('ModelName')
                     if model_name in models:
                         # Duplicate found. Replace the existing info if the model is newer (training job name contains dt in YYYYMMDDHHMMSS format)
@@ -175,6 +175,13 @@ def GetDeepRacerModelInfo(sagemaker, src_s3, model, src_account):
     training_job = sagemaker.describe_training_job(TrainingJobName = model['TrainingJobName'])
     # Split the s3 path for the reward function path hyper parameter to extract the model name
     model['ModelName'] = training_job['HyperParameters']['reward_function_s3_source'].split('/')[4]
+    # Check if 'S3ModelArtifacts' is already supplied (due to list call as the originator)
+    if 'S3ModelArtifacts' in model:
+        model.pop('S3ModelArtifacts')
+    else:
+        # Set the S3ModelArtifacts property with the artifact location only if the artifact still exists in S3
+        if S3ObjectExists(src_s3, training_job['ModelArtifacts']['S3ModelArtifacts']):
+            model['S3ModelArtifacts'] = training_job['ModelArtifacts']['S3ModelArtifacts']
     # Set the uploaded property based upon whether a model with the same name already exists in our S3 bucket therefore indicating the model has already been uploaded.
     model['Uploaded'] = S3ObjectExists(boto3.resource('s3'), os.environ['DESTINATION_BUCKET'], f"{model['ModelName']}-{src_account}-{model['Region']}.tar.gz")
     return model
