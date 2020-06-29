@@ -3,7 +3,7 @@
 
 {% block app_content %}
     <p>{{ _('This application allows you to upload Deep Racer models trained in your own AWS account to the Deep Racer cars for this event.') }}</p>
-    <p>{{ _('To use this application we ask you to create an IAM role in your account that this application will use to access your models and upload them to the car.') }} {{ _('Please click this') }} <a href="./downloads/iam_role.yaml">{{ _('link') }}</a> {{ _('to download a') }} <a href="https://aws.amazon.com/cloudformation/" target="_blank">{{ _('CloudFormation') }}</a> {{ _('template which will deploy the role for you.') }}</p>
+    <p>{{ _('To use this application we ask you to create an IAM role in your account that this application will use to access your models and upload them to the car.') }} {{ _('Please click this') }} <a href="https://console.aws.amazon.com/cloudformation/home?region={{ region }}#/stacks/create/review?stackName=deep-racer-event&templateURL={{ link_url }}/iam_role.yaml" target="_blank">{{ _('link') }}</a> {{ _('to download a') }} <a href="https://aws.amazon.com/cloudformation/" target="_blank">{{ _('CloudFormation') }}</a> {{ _('template which will deploy the role for you.') }}</p>
     <p>
         <a data-toggle="collapse" href="#iamRole">
             {{ _('If you prefer to create the IAM role yourself manually please click here to show the required policies.') }}

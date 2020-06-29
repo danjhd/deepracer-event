@@ -554,16 +554,20 @@ Resources:
         - Name: flask-app
           Image: !Ref ContainerImageLocation
           Environment:
-            - Name: WEBSERVICE_ENDPOINT
-              Value: !Sub https://${ServerlessApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/${ServerlessApiProdStage}
             - Name: API_KEY
               Value: !Select [2, !Split ['/', !Ref 'AWS::StackId']]
-            - Name: DESTINATION_BUCKET
-              Value: !Ref ModelData
             - Name: AWS_ACCOUNT_ID
               Value: !Ref AWS::AccountId
+            - Name: AWS_REGION
+              Value: !Ref AWS::Region
             - Name: AWS_XRAY_CONTEXT_MISSING
               Value: LOG_ERROR
+            - Name: DESTINATION_BUCKET
+              Value: !Ref ModelData
+            - Name: LINK_URL
+              Value: 'https://409650071325-static.s3-eu-west-1.amazonaws.com'
+            - Name: WEBSERVICE_ENDPOINT
+              Value: !Sub https://${ServerlessApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/${ServerlessApiProdStage}
           PortMappings:
             - ContainerPort: 5000
               Protocol: tcp

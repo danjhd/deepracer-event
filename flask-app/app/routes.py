@@ -20,7 +20,7 @@ def index():
 @app.route('/role', methods=['GET'])
 def role():
     form = RoleForm()
-    return render_template('role.html.j2', title='Deep Racer Model Uploader', form=form, account_id=app.config['AWS_ACCOUNT_ID'])
+    return render_template('role.html.j2', title='Deep Racer Model Uploader', form=form, account_id=app.config['AWS_ACCOUNT_ID'], region=app.config['AWS_REGION'], link_url=app.config['LINK_URL'])
 
 @app.route('/downloads/<path>')
 def downloadFile (path):
