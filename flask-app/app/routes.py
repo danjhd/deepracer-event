@@ -2,14 +2,13 @@ import json
 import os
 import boto3
 import requests
-from io import BytesIO
 from aws_xray_sdk.core import patch_all
 from botocore.exceptions import ClientError
 from flask import flash, redirect, render_template, request, send_file, url_for
 from werkzeug.utils import secure_filename
+from flask_babel import _
 from app import app
 from app.forms import RoleForm, S3Form
-from flask_babel import _
 
 patch_all()
 
@@ -24,15 +23,7 @@ def role():
 
 @app.route('/downloads/<path>')
 def downloadFile (path):
-    pathFull = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'downloads', path)
-    f = open(pathFull, mode='r')
-    fileContent = f.read()
-    f.close()
-    fileContent = fileContent.replace('{{ EventAccountId }}', app.config['AWS_ACCOUNT_ID'])
-    mem = BytesIO()
-    mem.write(fileContent.encode('utf-8'))
-    mem.seek(0)
-    return send_file(mem, attachment_filename=path, as_attachment=True)
+    return send_file(f'./downloads/{path}', attachment_filename=path, as_attachment=True)
 
 @app.route('/model', methods=['GET'])
 def model():
