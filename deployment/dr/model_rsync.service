@@ -1,0 +1,12 @@
+[Unit]
+Description=DR Model rsync
+After=network.target
+
+[Service]
+ExecStart=/etc/systemd/system/model_rsync.sh
+Restart=on-failure
+User=pi
+StandardOutput=file:/var/log/model_rsync.log
+
+[Install]
+WantedBy=multi-user.target

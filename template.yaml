@@ -306,7 +306,7 @@ Resources:
       PublicAccessBlockConfiguration:
         BlockPublicAcls: True
         BlockPublicPolicy: True
-        IgnorePublicAcls: True
+        IgnorePublicAcls: False
         RestrictPublicBuckets: True
       BucketEncryption:
         ServerSideEncryptionConfiguration:
@@ -317,8 +317,18 @@ Resources:
         - QueueConfigurations:
             - Queue: !GetAtt SQSQueue.Arn
               Event: 's3:ObjectCreated:*'
+              Filter:
+                  S3Key:
+                    Rules:
+                      - Name: suffix
+                        Value: '.tar.gz'
             - Queue: !GetAtt SQSQueue.Arn
               Event: 's3:ObjectRemoved:*'
+              Filter:
+                  S3Key:
+                    Rules:
+                      - Name: suffix
+                        Value: '.tar.gz'
         - !Ref AWS::NoValue
     Metadata:
       cfn_nag:
@@ -447,30 +457,9 @@ Resources:
             UserPoolDomain: !Ref UserPoolDomain
         - Order: 20
           Type: forward
-          TargetGroupArn: !Ref TargetGroupBlue
+          TargetGroupArn: !Ref TargetGroup
 
-  TargetGroupBlue:
-    Type: AWS::ElasticLoadBalancingV2::TargetGroup
-    DependsOn: LoadBalancer
-    Properties:
-      Protocol: HTTP
-      Port: 5000
-      TargetType: ip
-      VpcId: !Ref Vpc
-      TargetGroupAttributes:
-        - Key: deregistration_delay.timeout_seconds
-          Value: '5'
-      HealthCheckProtocol: HTTP
-      HealthCheckPath: /
-      HealthCheckPort: traffic-port
-      HealthyThresholdCount: 2
-      UnhealthyThresholdCount: 2
-      HealthCheckTimeoutSeconds: 2
-      HealthCheckIntervalSeconds: 5
-      Matcher:
-        HttpCode: '200'
-
-  TargetGroupGreen:
+  TargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     DependsOn: LoadBalancer
     Properties:
@@ -565,7 +554,7 @@ Resources:
             - Name: DESTINATION_BUCKET
               Value: !Ref ModelData
             - Name: LINK_URL
-              Value: 'https://409650071325-static.s3-eu-west-1.amazonaws.com'
+              Value: !Sub 'https://${ModelData.DomainName}'
             - Name: WEBSERVICE_ENDPOINT
               Value: !Sub https://${ServerlessApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/${ServerlessApiProdStage}
           PortMappings:
@@ -600,10 +589,10 @@ Resources:
       Cluster: !Ref FargateCluster
       TaskDefinition: !Ref EcsTaskDefinition
       LoadBalancers: 
-        - TargetGroupArn: !Ref TargetGroupBlue
+        - TargetGroupArn: !Ref TargetGroup
           ContainerName: flask-app
           ContainerPort: 5000
-      DesiredCount: 1
+      DesiredCount: 2
       LaunchType: FARGATE
       PlatformVersion: LATEST
       DeploymentConfiguration:
@@ -751,3 +740,75 @@ Resources:
         HostedZoneId: !GetAtt LoadBalancer.CanonicalHostedZoneID
         DNSName: !GetAtt LoadBalancer.DNSName
         EvaluateTargetHealth: True
+
+  GreenGrassRole:
+    Type: AWS::IAM::Role
+    Properties: 
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - sts:AssumeRole
+            Principal:
+              Service:
+                - greengrass.amazonaws.com
+                - lambda.amazonaws.com
+      Description: A role that Greengrass will assume when excuting a Lambda Function.
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: greengrass-s3-sync
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                Resource:
+                  - !Sub '${ModelData.Arn}/*'
+              - Effect: Allow
+                Action:
+                  - sqs:ReceiveMessage
+                  - sqs:DeleteMessage
+                Resource:
+                  - !GetAtt SQSQueue.Arn
+              - Effect: Allow
+                Action:
+                  - logs:DescribeLogStreams
+                Resource:
+                  - '*'
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W11
+            reason: Need * on DescribeLogStreams.
+
+  S3SyncFunction:
+    Type: AWS::Serverless::Function
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      AutoPublishAlias: greengrass
+      Runtime: python3.7
+      Handler: app.lambda_handler
+      MemorySize: 128
+      Timeout: 900
+      Role: !GetAtt GreenGrassRole.Arn
+      Environment:
+        Variables:
+          QUEUE_URL: !Ref SQSQueue
+          LOCAL_FOLDER: /dr_models
+      CodeUri: ./functions/greengrass_s3_sync/
+
+Outputs:
+
+  S3SyncFunctionName:
+    Value: !Ref S3SyncFunction
+ 
+  SQSQueueUrl:
+    Value: !Ref SQSQueue
+
+  GreengrassRoleName:
+    Value: !Ref GreenGrassRole
+
